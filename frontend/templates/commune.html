@@ -54,7 +54,7 @@ let charts = {};
 
 const fmt  = n => n==null?"—":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
 const fmtN = n => n==null?"—":new Intl.NumberFormat("fr-FR").format(n);
-const fmtP = n => n==null?"—":n.toFixed(1)+" %";
+const fmtP = n => (n==null||n==="")?"—":parseFloat(n).toFixed(1)+" %";
 const D    = id => document.getElementById(id);
 
 function debounce(fn,ms=250){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
@@ -163,17 +163,15 @@ async function analyser(code){
 
   <!-- Tab: Marché -->
   <div class="tab-pane active" id="tab-marche">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Évolution du prix médian /m²</div>
-        ${tend.length>=3?`<div style="position:relative;height:220px"><canvas id="chart-tend"></canvas></div>`
-          :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
-      </div>
-      <div class="card">
-        <div class="card-title">Volume de transactions par trimestre</div>
-        ${tend.length>=3?`<div style="position:relative;height:220px"><canvas id="chart-vol"></canvas></div>`
-          :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
-      </div>
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-title">Évolution du prix médian /m²</div>
+      ${tend.length>=3?`<div style="position:relative;height:200px"><canvas id="chart-tend"></canvas></div>`
+        :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
+    </div>
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-title">Volume de transactions par trimestre</div>
+      ${tend.length>=3?`<div style="position:relative;height:200px"><canvas id="chart-vol"></canvas></div>`
+        :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
     </div>
     ${tend.length>=3?buildInsightTendance(tend):""}
   </div>
@@ -228,8 +226,8 @@ async function analyser(code){
   <!-- Tab: Contexte socio -->
   <div class="tab-pane" id="tab-socio">
     <div class="grid-3">
-      ${buildSocioCard("💰","Revenu médian annuel",r.revenu_median?fmt(r.revenu_median):"Non disponible",r.revenu_median?"Source : INSEE Filosofi 2021":"",r.revenu_median?(r.revenu_median>28000?"Commune aisée":r.revenu_median>22000?"Revenu dans la moyenne":"Revenu inférieur à la moyenne nationale"):"")}
-      ${buildSocioCard("👔","Taux de chômage",r.taux_chomage!=null?fmtP(r.taux_chomage):"Non disponible",r.taux_chomage!=null?"Source : INSEE RP 2021":"",r.taux_chomage!=null?(r.taux_chomage<7?"Faible chômage — marché du travail dynamique":r.taux_chomage<12?"Chômage modéré":"Chômage élevé — marché sous tension"):"") }
+      ${buildSocioCard("💰","Revenu médian annuel",r.revenu_median?fmt(r.revenu_median):"Non disponible",r.revenu_median?"Source : INSEE Filosofi 2021":"",r.revenu_median?(parseFloat(r.revenu_median)>28000?"Commune aisée":parseFloat(r.revenu_median)>22000?"Revenu dans la moyenne":"Revenu inférieur à la moyenne nationale"):"")}
+      ${buildSocioCard("👔","Taux de chômage",r.taux_chomage!=null?fmtP(r.taux_chomage):"Non disponible",r.taux_chomage!=null?"Source : INSEE RP 2021":"",r.taux_chomage!=null?(parseFloat(r.taux_chomage)<7?"Faible chômage — marché du travail dynamique":parseFloat(r.taux_chomage)<12?"Chômage modéré":"Chômage élevé — marché sous tension"):"") }
       ${buildSocioCard("👥","Population",r.population?fmtN(r.population)+" hab.":"Non disponible","Source : INSEE","Utilisé pour évaluer la liquidité du marché immobilier")}
     </div>
     <div class="insight mt-2">
@@ -261,9 +259,12 @@ function renderTabCharts(tab,dpeD,trD,brD,tend){
     if(tab==="marche"&&tend.length>=3){
       destroyChart("chart-tend");destroyChart("chart-vol");
       const DPE_C={A:"#00843d",B:"#50b24a",C:"#a4c437",D:"#f7d11e",E:"#ef8023",F:"#e3001b",G:"#7b001e"};
+      const vals=tend.map(t=>t.prix_m2_median).filter(Boolean);
+      const yMin=vals.length?Math.floor(Math.min(...vals)*0.95/100)*100:0;
+      const yMax=vals.length?Math.ceil(Math.max(...vals)*1.05/100)*100:undefined;
       charts["chart-tend"]=new Chart(D("chart-tend").getContext("2d"),{type:"line",
-        data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Prix /m²",data:tend.map(t=>t.prix_m2_median),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",fill:true,tension:.3,pointRadius:3}]},
-        options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+" €"},grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
+        data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Prix /m²",data:tend.map(t=>t.prix_m2_median),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",fill:true,tension:.3,pointRadius:3,pointHoverRadius:5}]},
+        options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y)+" €/m²"}}},scales:{y:{min:yMin,max:yMax,ticks:{callback:v=>v+" €"},grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
       charts["chart-vol"]=new Chart(D("chart-vol").getContext("2d"),{type:"bar",
         data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Transactions",data:tend.map(t=>t.nb_transactions),backgroundColor:"rgba(37,99,235,.5)",borderRadius:4}]},
         options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
