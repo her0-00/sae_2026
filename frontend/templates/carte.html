@@ -101,12 +101,24 @@
 const API = "";
 let geojsonLayer = null;
 let highlightedLayer = null;
+let isSatellite = false;
 
 const map = L.map("map",{zoomControl:false}).setView([47.2,2.5],6);
 L.control.zoom({position:"topright"}).addTo(map);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+
+const tileNormal = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
   attribution:'© OpenStreetMap © CARTO',maxZoom:19
-}).addTo(map);
+});
+const tileSatellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
+  attribution:'© Esri © DigitalGlobe',maxZoom:19
+});
+tileNormal.addTo(map);
+L.control.layers({"🗺️ Plan":tileNormal,"🛰️ Satellite":tileSatellite},{},{position:"topright"}).addTo(map);
+
+map.on("baselayerchange", e => {
+  isSatellite = e.name.includes("Satellite");
+  if(geojsonLayer) geojsonLayer.setStyle(f => layerStyle(f));
+});
 
 function priceColor(prix){
   if(!prix||prix<100)return"#e2e8f0";
@@ -116,6 +128,13 @@ function priceColor(prix){
   if(prix<6000)return"#1d4ed8";
   return"#1e1b4b";
 }
+
+function layerStyle(f){
+  const prix = f.properties.prix_m2_median;
+  if(isSatellite) return{fillColor:priceColor(prix),fillOpacity:.15,color:priceColor(prix),weight:1.5};
+  return{fillColor:priceColor(prix),fillOpacity:.75,color:"#fff",weight:.8};
+}
+
 function fmt(n){return n==null?"—":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n)}
 function fmtN(n){return n==null?"—":new Intl.NumberFormat("fr-FR").format(n)}
 
@@ -123,7 +142,6 @@ async function chargerCarte(){
   const type  = document.getElementById("f-type").value;
   const dept  = document.getElementById("f-dept").value.trim();
   const annee = document.getElementById("f-annee").value;
-
   const panel = document.getElementById("info-panel");
   panel.innerHTML=`<div class="loading-bar" style="margin-bottom:.5rem"></div><div style="font-size:.8rem;color:var(--muted)">Chargement…</div>`;
 
@@ -135,13 +153,10 @@ async function chargerCarte(){
     const res = await fetch(API+"/api/carte/prix-m2?"+params);
     if(!res.ok)throw new Error("HTTP "+res.status);
     const geojson = await res.json();
-
     if(geojsonLayer)map.removeLayer(geojsonLayer);
 
     geojsonLayer = L.geoJSON(geojson,{
-      style(f){
-        return{fillColor:priceColor(f.properties.prix_m2_median),fillOpacity:.75,color:"#fff",weight:.8,cursor:"pointer"};
-      },
+      style(f){ return layerStyle(f); },
       onEachFeature(f,layer){
         const p=f.properties;
         layer.on({
@@ -152,7 +167,8 @@ async function chargerCarte(){
           mouseout(e){
             if(highlightedLayer!==e.target){
               geojsonLayer.resetStyle(e.target);
-              if(!highlightedLayer) panel.innerHTML=`<span class="text-muted text-sm">Survolez ou cliquez une commune.</span>`;
+              if(highlightedLayer) updateInfoPanel(highlightedLayer.feature.properties,true);
+              else panel.innerHTML=`<span class="text-muted text-sm">Survolez ou cliquez une commune.</span>`;
             }
           },
           click(e){
@@ -166,11 +182,9 @@ async function chargerCarte(){
     }).addTo(map);
 
     if(geojsonLayer.getBounds().isValid())map.fitBounds(geojsonLayer.getBounds(),{padding:[20,20]});
-
     const n=geojson.features.length;
     panel.innerHTML=`<span style="font-size:.82rem;color:var(--muted)">${fmtN(n)} commune${n>1?"s":""} affichée${n>1?"s":""}. Cliquez pour détails.</span>`;
     document.getElementById("legend-wrap").style.display="block";
-
   }catch(e){
     panel.innerHTML=`<div class="alert alert-error" style="font-size:.8rem">${e.message}</div>`;
   }
@@ -183,7 +197,10 @@ function updateInfoPanel(p,withLink=false){
       <div class="popup-name">${p.nom_commune}</div>
       <div class="popup-price">${p.prix_m2_median?fmtN(p.prix_m2_median)+" €/m²":"Données insuffisantes"}</div>
       <div class="popup-meta">Dept. ${p.departement} · ${p.nb_transactions?fmtN(p.nb_transactions)+" transactions":""}</div>
-      ${withLink?`<a href="/commune?code=${p.commune_code}" class="btn btn-primary btn-sm" style="margin-top:.4rem">Analyse complète →</a>`:""}
+      ${withLink?`
+        <a href="/commune?code=${p.commune_code}" class="btn btn-primary btn-sm" style="margin-top:.4rem">Analyse complète →</a>
+        <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="btn btn-outline btn-sm" style="margin-top:.4rem">🛰️ Voir sur Google Maps</a>
+      `:""}
     </div>`;
 }
 

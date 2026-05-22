@@ -103,11 +103,7 @@ async function analyser(code){
     apiFetch(`/api/analyses/tendances?commune_code=${code}&type=${type}`),
   ]);
 
-  const r    = resume.status==="fulfilled"    ? resume.value    : null;
-  const dpeD = dpe.status==="fulfilled"       ? dpe.value       : [];
-  const trD  = transport.status==="fulfilled" ? transport.value : [];
-  const brD  = bruit.status==="fulfilled"     ? bruit.value     : [];
-  const tend = tendances.status==="fulfilled" ? tendances.value : [];
+  const r     = resume.status==="fulfilled"    ? resume.value    : null;
 
   if(!r){D("result").innerHTML=`<div class="alert alert-error">Commune introuvable ou sans données.</div>`;return}
 
@@ -115,15 +111,11 @@ async function analyser(code){
   r.revenu_median  = parseFloat(r.revenu_median)  || null;
   r.taux_chomage   = parseFloat(r.taux_chomage)   || null;
   r.prix_m2_median = parseFloat(r.prix_m2_median) || null;
-  const tendN = tend.map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
-  const dpeN  = dpeD.map(d=>({...d, prix_m2_median: parseFloat(d.prix_m2_median)||null}));
-  const trN   = trD.map(t=>({...t,  prix_m2_median: parseFloat(t.prix_m2_median)||null}));
-  const brN   = brD.map(b=>({...b,  prix_m2_median: parseFloat(b.prix_m2_median)||null}));
-
-  const tend = tendN;
-  const dpeD2 = dpeN;
-  const trD2  = trN;
-  const brD2  = brN;
+  const tendN = (tendances.status==="fulfilled" ? tendances.value : []).map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
+  const dpeN  = (dpe.status==="fulfilled"       ? dpe.value       : []).map(d=>({...d, prix_m2_median: parseFloat(d.prix_m2_median)||null}));
+  const trN   = (transport.status==="fulfilled" ? transport.value : []).map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
+  const brN   = (bruit.status==="fulfilled"     ? bruit.value     : []).map(b=>({...b, prix_m2_median: parseFloat(b.prix_m2_median)||null}));
+  const tend=tendN, dpeD=dpeN, trD=trN, brD=brN;
 
   D("h-commune").textContent=r.nom_commune||"Fiche commune";
 
@@ -179,7 +171,7 @@ async function analyser(code){
   <div class="tab-pane active" id="tab-marche">
     <div class="card" style="margin-bottom:1.25rem">
       <div class="card-title">Évolution du prix médian /m²</div>
-      ${tend.length>=3?`<div style="position:relative;height:200px"><canvas id="chart-tend"></canvas></div>`
+      ${tend.length>=3?`<div style="position:relative;height:420px"><canvas id="chart-tend"></canvas></div>`
         :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
     </div>
     <div class="card" style="margin-bottom:1.25rem">
@@ -274,11 +266,13 @@ function renderTabCharts(tab,dpeD,trD,brD,tend){
       destroyChart("chart-tend");destroyChart("chart-vol");
       const DPE_C={A:"#00843d",B:"#50b24a",C:"#a4c437",D:"#f7d11e",E:"#ef8023",F:"#e3001b",G:"#7b001e"};
       const vals=tend.map(t=>t.prix_m2_median).filter(Boolean);
-      const yMin=vals.length?Math.floor(Math.min(...vals)*0.95/100)*100:0;
-      const yMax=vals.length?Math.ceil(Math.max(...vals)*1.05/100)*100:undefined;
+      const vMin=Math.min(...vals),vMax=Math.max(...vals);
+      const padding=(vMax-vMin)*0.15||vMin*0.1;
+      const yMin=Math.floor((vMin-padding)/100)*100;
+      const yMax=Math.ceil((vMax+padding)/100)*100;
       charts["chart-tend"]=new Chart(D("chart-tend").getContext("2d"),{type:"line",
-        data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Prix /m²",data:tend.map(t=>t.prix_m2_median),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",fill:true,tension:.3,pointRadius:3,pointHoverRadius:5}]},
-        options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y)+" €/m²"}}},scales:{y:{min:yMin,max:yMax,ticks:{callback:v=>v+" €"},grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
+        data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Prix /m²",data:tend.map(t=>t.prix_m2_median),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",fill:true,tension:.3,pointRadius:4,pointHoverRadius:6}]},
+        options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y)+" €/m²"}}},scales:{y:{min:yMin,max:yMax,ticks:{callback:v=>v.toLocaleString("fr-FR")+" €",maxTicksLimit:8},grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
       charts["chart-vol"]=new Chart(D("chart-vol").getContext("2d"),{type:"bar",
         data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Transactions",data:tend.map(t=>t.nb_transactions),backgroundColor:"rgba(37,99,235,.5)",borderRadius:4}]},
         options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});

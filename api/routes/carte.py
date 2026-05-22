@@ -33,6 +33,8 @@ def prix_m2_geojson():
             c.departement_code,
             p.prix_m2_median,
             p.nb_transactions,
+            ST_Y(ST_Centroid(c.geom)) AS lat,
+            ST_X(ST_Centroid(c.geom)) AS lng,
             ST_AsGeoJSON(c.geom)::json AS geometry
         FROM communes_stats c
         JOIN prix_m2_par_commune p
@@ -57,6 +59,8 @@ def prix_m2_geojson():
                 "departement":    r["departement_code"],
                 "prix_m2_median": r["prix_m2_median"],
                 "nb_transactions": r["nb_transactions"],
+                "lat":            r["lat"],
+                "lng":            r["lng"],
             },
         }
         for r in rows

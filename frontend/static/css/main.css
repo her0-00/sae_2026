@@ -191,9 +191,9 @@ input::placeholder{color:#94a3b8}
 /* ── Autocomplete ── */
 .autocomplete-wrap{position:relative}
 .autocomplete-list{position:absolute;z-index:300;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-m);list-style:none;max-height:220px;overflow-y:auto;width:100%;top:calc(100% + 4px)}
-.autocomplete-list li{padding:.6rem 1rem;cursor:pointer;font-size:.88rem;border-bottom:1px solid var(--border)}
+.autocomplete-list li{padding:.6rem 1rem;cursor:pointer;font-size:.88rem;border-bottom:1px solid var(--border);color:var(--text)}
 .autocomplete-list li:last-child{border-bottom:none}
-.autocomplete-list li:hover{background:var(--bg)}
+.autocomplete-list li:hover{background:var(--bg);color:var(--primary)}
 .autocomplete-list li span{font-size:.78rem;color:var(--muted)}
 
 /* ── Utils ── */

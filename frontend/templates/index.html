@@ -375,7 +375,7 @@ function renderResult(data, body, dpeClasse, prixDemande){
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Évolution du prix médian</div>
-        ${tendances.length>=3?`<canvas id="chart-tend" height="160"></canvas>`:`<div class="alert alert-info">Pas assez d'historique pour cette commune.</div>`}
+        ${tendances.length>=3?`<div style="position:relative;height:320px"><canvas id="chart-tend"></canvas></div>`:`<div class="alert alert-info">Pas assez d'historique pour cette commune.</div>`}
       </div>
       <div class="card">
         <div class="card-title">Transactions récentes comparables</div>
@@ -407,12 +407,15 @@ function renderResult(data, body, dpeClasse, prixDemande){
             label:"Prix médian /m²",
             data: tendances.map(t=>t.prix_m2_median),
             borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",
-            fill:true,tension:.3,pointRadius:3,pointHoverRadius:5,
+            fill:true,tension:.3,pointRadius:4,pointHoverRadius:6,
           }]
         },
         options:{
-          plugins:{legend:{display:false}},
-          scales:{y:{ticks:{callback:v=>v+" €"},grid:{color:"#f0f0f0"}}},
+          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y).toLocaleString("fr-FR")+" €/m²"}}},
+          scales:{y:{
+            min:(()=>{const v=tendances.map(t=>t.prix_m2_median).filter(Boolean);const mn=Math.min(...v),mx=Math.max(...v);const p=(mx-mn)*0.15||mn*0.1;return Math.floor((mn-p)/100)*100})(),
+            max:(()=>{const v=tendances.map(t=>t.prix_m2_median).filter(Boolean);const mn=Math.min(...v),mx=Math.max(...v);const p=(mx-mn)*0.15||mn*0.1;return Math.ceil((mx+p)/100)*100})(),
+            ticks:{callback:v=>v.toLocaleString("fr-FR")+" €",maxTicksLimit:8},grid:{color:"#f0f0f0"}}},
           responsive:true,maintainAspectRatio:false,
         }
       });
