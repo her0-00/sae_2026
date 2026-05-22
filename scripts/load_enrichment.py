@@ -13,6 +13,7 @@ log = logging.getLogger("enrichment")
 
 
 def enrich_dpe(conn):
+    # Passe 1 : jointure exacte sur adresse_normalisee + commune_code
     with conn.cursor() as cur:
         cur.execute("""
             UPDATE transactions t
@@ -25,13 +26,41 @@ def enrich_dpe(conn):
                 WHERE classe_energie IS NOT NULL AND LENGTH(adresse_normalisee) > 5
                 ORDER BY commune_code, adresse_normalisee, annee_dpe DESC NULLS LAST
             ) d
-            WHERE t.commune_code = d.commune_code
+            WHERE t.commune_code       = d.commune_code
               AND t.adresse_normalisee = d.adresse_normalisee
               AND t.dpe_classe IS NULL
         """)
-        n = cur.rowcount
+        n1 = cur.rowcount
     conn.commit()
-    log.info("✓ DPE : %d transactions enrichies", n)
+    log.info("  Passe 1 (adresse exacte)   : %d transactions", n1)
+
+    # Passe 2 : jointure spatiale — DPE le plus proche dans un rayon de 30m
+    with conn.cursor() as cur:
+        cur.execute("""
+            UPDATE transactions t
+            SET dpe_classe = d.classe_energie,
+                dpe_conso  = d.conso_energie
+            FROM (
+                SELECT DISTINCT ON (t2.id)
+                    t2.id,
+                    d2.classe_energie,
+                    d2.conso_energie
+                FROM transactions t2
+                JOIN dpe d2
+                  ON d2.geom IS NOT NULL
+                 AND ST_DWithin(t2.geom::geography, d2.geom::geography, 30)
+                WHERE t2.geom IS NOT NULL
+                  AND t2.dpe_classe IS NULL
+                  AND d2.classe_energie IS NOT NULL
+                ORDER BY t2.id, t2.geom <-> d2.geom
+            ) d
+            WHERE t.id = d.id
+              AND t.dpe_classe IS NULL
+        """)
+        n2 = cur.rowcount
+    conn.commit()
+    log.info("  Passe 2 (proximité GPS 30m): %d transactions", n2)
+    log.info("✓ DPE total : %d transactions enrichies", n1 + n2)
 
 
 def enrich_distances(conn):

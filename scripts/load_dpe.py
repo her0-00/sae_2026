@@ -53,9 +53,14 @@ def charger_dpe(dept: str, conn) -> int:
                 """INSERT INTO dpe
                    (numero_dpe,commune_code,adresse,adresse_normalisee,
                     classe_energie,conso_energie,classe_ges,annee_dpe,
-                    type_batiment,annee_construction)
+                    type_batiment,annee_construction,
+                    latitude,longitude,geom)
                    VALUES %s""",
-                batch, page_size=1000,
+                batch,
+                template="""(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                    CASE WHEN %s IS NOT NULL AND %s IS NOT NULL
+                         THEN ST_SetSRID(ST_MakePoint(%s,%s),4326) ELSE NULL END)""",
+                page_size=1000,
             )
         conn.commit()
         inserted += len(batch)
@@ -66,7 +71,7 @@ def charger_dpe(dept: str, conn) -> int:
             "size":   10_000,
             "select": "numero_dpe,code_insee_ban,adresse_ban,etiquette_dpe,"
                       "conso_5_usages_par_m2_ep,etiquette_ges,date_reception_dpe,"
-                      "type_batiment,annee_construction",
+                      "type_batiment,annee_construction,_geopoint",
             "qs":     f"code_departement_ban:{dept}",
         }
         if after:
@@ -103,6 +108,15 @@ def charger_dpe(dept: str, conn) -> int:
                 annee_c = int(annee_c) if annee_c is not None else None
             except (ValueError, TypeError):
                 annee_c = None
+            # Coordonnées GPS depuis _geopoint ("lat,lon")
+            geopoint = str(row.get("_geopoint") or "").strip()
+            lat = lng = None
+            if geopoint and "," in geopoint:
+                try:
+                    lat, lng = [float(x) for x in geopoint.split(",", 1)]
+                except ValueError:
+                    pass
+
             batch.append((
                 str(row.get("numero_dpe") or ""), code, adresse,
                 normaliser(adresse), classe, conso,
@@ -110,6 +124,8 @@ def charger_dpe(dept: str, conn) -> int:
                 annee_dpe,
                 str(row.get("type_batiment") or "").strip().lower() or None,
                 annee_c,
+                lat, lng,          # latitude, longitude
+                lat, lng, lng, lat, # pour CASE WHEN geom
             ))
             if len(batch) >= 2000:
                 flush()

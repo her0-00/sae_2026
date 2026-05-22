@@ -85,28 +85,32 @@ def main():
     log.info("%d communes à mettre à jour", len(df))
 
     conn = get_conn()
-    with conn.cursor() as cur:
-        psycopg2.extras.execute_values(
-            cur,
-            """
-            UPDATE communes_stats cs SET
-                revenu_median = d.revenu_median::numeric,
-                taux_chomage  = d.taux_chomage::numeric
-            FROM (VALUES %s) AS d(commune_code, revenu_median, taux_chomage)
-            WHERE cs.commune_code = d.commune_code
-            """,
-            [
-                (
-                    row["commune_code"],
-                    str(row["revenu_median"]) if pd.notna(row.get("revenu_median")) else None,
-                    str(row["taux_chomage"])  if pd.notna(row.get("taux_chomage"))  else None,
-                )
-                for _, row in df.iterrows()
-            ],
-            page_size=2000,
+    # Insertion par batch de 2000 avec accumulation du rowcount
+    updated = 0
+    rows = [
+        (
+            row["commune_code"],
+            str(row["revenu_median"]) if pd.notna(row.get("revenu_median")) else None,
+            str(row["taux_chomage"])  if pd.notna(row.get("taux_chomage"))  else None,
         )
-        updated = cur.rowcount
-    conn.commit()
+        for _, row in df.iterrows()
+    ]
+    for i in range(0, len(rows), 2000):
+        batch = rows[i:i+2000]
+        with conn.cursor() as cur:
+            psycopg2.extras.execute_values(
+                cur,
+                """
+                UPDATE communes_stats cs SET
+                    revenu_median = d.revenu_median::numeric,
+                    taux_chomage  = d.taux_chomage::numeric
+                FROM (VALUES %s) AS d(commune_code, revenu_median, taux_chomage)
+                WHERE cs.commune_code = d.commune_code
+                """,
+                batch,
+            )
+            updated += cur.rowcount
+        conn.commit()
 
     with conn.cursor() as cur:
         cur.execute("""
