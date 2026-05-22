@@ -1,140 +1,190 @@
-{% extends "base.html" %}
-{% block title %}Opportunités — ImmoBI{% endblock %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Opportunités — ImmoBI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
+    <ul class="nav-links">
+      <li><a href="/">Analyser</a></li>
+      <li><a href="/carte">Carte des prix</a></li>
+      <li><a href="/commune">Fiche commune</a></li>
+      <li><a href="/opportunites" class="active">Opportunités</a></li>
+    </ul>
+  </div>
+</nav>
 
-{% block head %}
-<style>
-  .page-header { padding: 2rem 0 1.5rem; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
-  .filter-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top:1rem; }
-  .filter-form .btn { align-self: flex-end; }
-  .score-bar { height: 8px; border-radius: 4px; background: var(--color-border); }
-  .score-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2563eb, #16a34a); }
-  .rank-badge {
-    display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center;
-    border-radius: 50%; font-weight: 700; font-size: .9rem; flex-shrink: 0;
-    background: var(--color-primary); color: #fff;
-  }
-  .rank-badge.gold   { background: #f59e0b; }
-  .rank-badge.silver { background: #94a3b8; }
-  .rank-badge.bronze { background: #b45309; }
-</style>
-{% endblock %}
-
-{% block content %}
 <div class="page-header">
   <div class="container">
-    <h1 style="font-size:1.6rem;">Finder d'opportunités</h1>
-    <p style="color:var(--color-muted);margin-top:.3rem;">Identifiez les communes offrant le meilleur rapport qualité/prix.</p>
-    <form id="form-opps" class="filter-form">
+    <h1>Finder d'opportunités</h1>
+    <p>Identifiez les communes offrant le meilleur rapport prix / revenu / qualité de vie.</p>
+  </div>
+</div>
+
+<div class="container" style="padding-top:2rem;padding-bottom:3rem">
+
+  <!-- Formulaire filtres -->
+  <div class="card" style="margin-bottom:2rem">
+    <div style="font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1rem">
+      Critères de recherche
+    </div>
+    <form id="form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;align-items:end">
       <div class="form-group">
-        <label>Département</label>
-        <input id="filter-dept" type="text" placeholder="69" maxlength="3" required />
+        <label>Département *</label>
+        <input id="f-dept" type="text" placeholder="ex: 69, 35, 44…" maxlength="3" required>
       </div>
       <div class="form-group">
         <label>Type de bien</label>
-        <select id="filter-type">
+        <select id="f-type">
           <option value="Appartement">Appartement</option>
           <option value="Maison">Maison</option>
         </select>
       </div>
       <div class="form-group">
         <label>Budget max (€)</label>
-        <input id="filter-budget" type="number" placeholder="300000" min="0" />
+        <input id="f-budget" type="number" placeholder="300 000" min="0">
       </div>
       <div class="form-group">
-        <label>Surface (m²)</label>
-        <input id="filter-surface" type="number" placeholder="60" min="5" />
+        <label>Surface estimée (m²)</label>
+        <input id="f-surface" type="number" placeholder="60" min="5">
       </div>
-      <button type="submit" class="btn btn-primary">Trouver →</button>
+      <button type="submit" class="btn btn-primary btn-lg" style="align-self:end">
+        Trouver les opportunités →
+      </button>
     </form>
+
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted)">
+      <strong>Score composite :</strong>
+      50 % prix sous la médiane du département ·
+      50 % revenu médian relatif.
+      Plus le score est élevé, plus la commune offre un bon rapport qualité/prix.
+    </div>
+  </div>
+
+  <!-- Résultats -->
+  <div id="result">
+    <div class="alert alert-info">
+      Renseignez un département pour découvrir les communes les plus attractives.
+    </div>
   </div>
 </div>
 
-<div class="container" style="padding: 2rem 0 3rem;">
-  <div id="result-section"></div>
-</div>
-{% endblock %}
+<script>
+const API = "";
+const fmt  = n => n==null?"—":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+const fmtN = n => n==null?"—":new Intl.NumberFormat("fr-FR").format(n);
+const fmtP = n => n==null?"—":n.toFixed(1)+" %";
 
-{% block scripts %}
-<script type="module">
-import { getOpportunites } from "/static/js/api.js";
-import { formatEuro, formatNombre, showSpinner, showError } from "/static/js/utils.js";
-
-document.getElementById("form-opps").addEventListener("submit", async (e) => {
+document.getElementById("form").addEventListener("submit",async e=>{
   e.preventDefault();
-  const dept    = document.getElementById("filter-dept").value.trim();
-  const type    = document.getElementById("filter-type").value;
-  const budget  = document.getElementById("filter-budget").value;
-  const surface = document.getElementById("filter-surface").value;
+  const dept    = document.getElementById("f-dept").value.trim();
+  const type    = document.getElementById("f-type").value;
+  const budget  = document.getElementById("f-budget").value;
+  const surface = document.getElementById("f-surface").value;
+  const result  = document.getElementById("result");
 
-  showSpinner("result-section");
+  result.innerHTML=`<div class="spinner"></div><p class="loading-text">Analyse du département ${dept}…</p>`;
 
-  const params = { departement: dept, type };
-  if (budget)  params.budget_max = budget;
-  if (surface) params.surface    = surface;
+  const params = new URLSearchParams({departement:dept,type});
+  if(budget)  params.set("budget_max",budget);
+  if(surface) params.set("surface",surface);
 
-  try {
-    const data = await getOpportunites(params);
-    renderResultats(data);
-  } catch (err) {
-    showError("result-section", err.message);
+  try{
+    const r = await fetch(API+"/api/opportunites?"+params);
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||"Erreur "+r.status)}
+    const data = await r.json();
+    renderResultats(data,dept,type);
+  }catch(err){
+    result.innerHTML=`<div class="alert alert-error">${err.message}</div>`;
   }
 });
 
-function renderResultats(rows) {
-  if (!rows.length) {
-    document.getElementById("result-section").innerHTML =
-      `<div class="alert alert-info">Aucune commune trouvée pour ces critères.</div>`;
+function scoreColor(s){
+  if(s>=70)return"var(--success)";
+  if(s>=45)return"var(--warning)";
+  return"var(--danger)";
+}
+
+function renderResultats(rows,dept,type){
+  const result=document.getElementById("result");
+  if(!rows.length){
+    result.innerHTML=`<div class="alert alert-info">Aucune commune trouvée pour ces critères. Essayez d'élargir votre budget ou de changer de département.</div>`;
     return;
   }
 
-  const rankBadge = (i) => {
-    const cls = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
-    return `<span class="rank-badge ${cls}">${i + 1}</span>`;
-  };
+  const maxScore=rows[0]?.score_total||100;
 
-  const rows_html = rows.map((r, i) => `
-    <tr>
-      <td>${rankBadge(i)}</td>
-      <td>
-        <a href="/commune?code=${r.commune_code}" style="color:var(--color-primary);font-weight:600;">
-          ${r.nom_commune}
-        </a>
-        <div style="font-size:.8rem;color:var(--color-muted);">${r.commune_code} · Dept. ${r.departement_code}</div>
-      </td>
-      <td>${formatEuro(r.prix_m2_median)} /m²</td>
-      <td>${r.revenu_median ? formatEuro(r.revenu_median) : "—"}</td>
-      <td>${formatNombre(r.nb_transactions)}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:.5rem;">
-          <div class="score-bar" style="flex:1;">
-            <div class="score-fill" style="width:${r.score_total}%;"></div>
-          </div>
-          <span style="font-weight:700;font-size:.9rem;">${r.score_total}</span>
+  const cardsHtml = rows.map((r,i)=>{
+    const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
+    const numCls=i===0?"gold":i===1?"silver":i===2?"bronze":"";
+    const score=parseFloat(r.score_total)||0;
+    const pm2=r.prix_m2_median?Math.round(r.prix_m2_median):null;
+    const budgetCalc = document.getElementById("f-budget").value && document.getElementById("f-surface").value
+      ? pm2 * parseFloat(document.getElementById("f-surface").value) : null;
+
+    return`
+    <div class="rank-row">
+      <div class="rank-num ${numCls}" title="Rang ${i+1}">${medal}</div>
+
+      <div class="rank-info" style="min-width:0">
+        <h4><a href="/commune?code=${r.commune_code}" style="color:var(--text);text-decoration:none;hover:underline">${r.nom_commune}</a></h4>
+        <p>${r.commune_code} · Dept. ${r.departement_code} · ${fmtN(r.nb_transactions)} transactions</p>
+        <div style="display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.35rem">
+          <span class="stat-pill">💰 ${pm2?fmtN(pm2)+" €/m²":"—"}</span>
+          ${r.revenu_median?`<span class="stat-pill">👥 ${fmt(r.revenu_median)}/an</span>`:""}
+          ${budgetCalc?`<span class="stat-pill">🏠 ~${fmt(budgetCalc)} estimé</span>`:""}
         </div>
-      </td>
-    </tr>
-  `).join("");
+      </div>
 
-  document.getElementById("result-section").innerHTML = `
-    <div class="card table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Commune</th>
-            <th>Prix /m²</th>
-            <th>Revenu médian</th>
-            <th>Transactions</th>
-            <th>Score /100</th>
-          </tr>
-        </thead>
-        <tbody>${rows_html}</tbody>
-      </table>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:1.5rem;font-weight:800;color:${scoreColor(score)}">${score}</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">/ 100</div>
+        <a href="/commune?code=${r.commune_code}" class="btn btn-outline btn-sm">Voir →</a>
+      </div>
+
+      <div style="flex:0 0 100%;padding-left:52px" class="score-breakdown">
+        <div class="score-row">
+          <span class="score-row-label">Prix</span>
+          <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_prix||0}%;background:var(--primary)"></div></div>
+          <span class="score-row-val" style="color:var(--primary)">${Math.round(r.score_prix||0)}</span>
+        </div>
+        <div class="score-row">
+          <span class="score-row-label">Revenu</span>
+          <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_revenu||0}%;background:var(--teal)"></div></div>
+          <span class="score-row-val" style="color:var(--teal)">${Math.round(r.score_revenu||0)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  result.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+      <div>
+        <span style="font-weight:700;font-size:1.05rem">Top ${rows.length} communes — Département ${dept} · ${type}</span>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        ${rows[0]?`<span class="market-badge market-stable">🏆 Meilleure : ${rows[0].nom_commune} (score ${rows[0].score_total})</span>`:""}
+      </div>
     </div>
-    <p style="margin-top:.75rem;font-size:.8rem;color:var(--color-muted);">
-      Score composite : 50% prix sous la médiane du département · 50% revenu médian relatif.
-    </p>
+
+    <div id="rank-list">${cardsHtml}</div>
+
+    <div class="insight mt-2">
+      <div class="insight-icon">💡</div>
+      <div class="insight-text">
+        <strong>Comment lire ce classement</strong> : Le score "Prix" mesure à quel point la commune est sous-évaluée par rapport à la médiane départementale.
+        Le score "Revenu" reflète la richesse relative des ménages. Un score élevé sur les deux indique une commune avec
+        <strong>un fort potentiel de valorisation</strong> et une population à pouvoir d'achat solide.
+      </div>
+    </div>
   `;
 }
 </script>
-{% endblock %}
+</body>
+</html>
