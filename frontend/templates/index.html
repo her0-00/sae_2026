@@ -164,6 +164,17 @@ D("form").addEventListener("submit",async e=>{
     };
 
     if(!data.est){showErr("Pas assez de données pour cette commune. Essayez une ville plus grande.");return}
+
+    // Normaliser les champs numériques
+    if(data.resume){
+      data.resume.revenu_median   = parseFloat(data.resume.revenu_median)   || null;
+      data.resume.taux_chomage    = parseFloat(data.resume.taux_chomage)    || null;
+      data.resume.prix_m2_median  = parseFloat(data.resume.prix_m2_median)  || null;
+    }
+    data.tendances = data.tendances.map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
+    data.dpe       = data.dpe.map(d=>({...d, prix_m2_median: parseFloat(d.prix_m2_median)||null}));
+    data.transport = data.transport.map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
+
     renderResult(data, body, D("inp-dpe").value, prixDemande);
   }catch(err){showErr(err.message)}
 });
@@ -341,8 +352,8 @@ function renderResult(data, body, dpeClasse, prixDemande){
             <div class="dim-label">Contexte socio-économique</div>
             <div class="dim-value">${resume?.revenu_median ? fmt(resume.revenu_median)+"/an" : "Données manquantes"}</div>
             <div class="dim-detail">${resume?.taux_chomage!=null?`Chômage : ${fmtPct(resume.taux_chomage)} · `:""}${resume?.population?fmtN(resume.population)+" hab.":""}</div>
-            <div class="dim-score ${resume?.revenu_median?(resume.revenu_median>25000?"good":resume.revenu_median>18000?"ok":"bad"):"na"}">
-              ${resume?.revenu_median?(resume.revenu_median>25000?"A":resume.revenu_median>18000?"B":"C"):"?"}
+            <div class="dim-score ${resume?.revenu_median?(parseFloat(resume.revenu_median)>25000?"good":parseFloat(resume.revenu_median)>18000?"ok":"bad"):"na"}">
+              ${resume?.revenu_median?(parseFloat(resume.revenu_median)>25000?"A":parseFloat(resume.revenu_median)>18000?"B":"C"):"?"}
             </div>
           </div>
 

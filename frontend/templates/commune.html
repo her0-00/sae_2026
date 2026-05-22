@@ -111,6 +111,20 @@ async function analyser(code){
 
   if(!r){D("result").innerHTML=`<div class="alert alert-error">Commune introuvable ou sans données.</div>`;return}
 
+  // Normaliser les champs numériques
+  r.revenu_median  = parseFloat(r.revenu_median)  || null;
+  r.taux_chomage   = parseFloat(r.taux_chomage)   || null;
+  r.prix_m2_median = parseFloat(r.prix_m2_median) || null;
+  const tendN = tend.map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
+  const dpeN  = dpeD.map(d=>({...d, prix_m2_median: parseFloat(d.prix_m2_median)||null}));
+  const trN   = trD.map(t=>({...t,  prix_m2_median: parseFloat(t.prix_m2_median)||null}));
+  const brN   = brD.map(b=>({...b,  prix_m2_median: parseFloat(b.prix_m2_median)||null}));
+
+  const tend = tendN;
+  const dpeD2 = dpeN;
+  const trD2  = trN;
+  const brD2  = brN;
+
   D("h-commune").textContent=r.nom_commune||"Fiche commune";
 
   // Calcul tendance
@@ -118,7 +132,7 @@ async function analyser(code){
   if(tend.length>=4){
     const last=tend[tend.length-1],old=tend[Math.max(0,tend.length-8)];
     if(last?.prix_m2_median&&old?.prix_m2_median){
-      const delta=((last.prix_m2_median-old.prix_m2_median)/old.prix_m2_median*100);
+      const delta=((parseFloat(last.prix_m2_median)-parseFloat(old.prix_m2_median))/parseFloat(old.prix_m2_median)*100);
       mktClass=delta>5?"hot":delta>2?"warm":delta<-3?"cool":"stable";
       const labels={hot:"Marché en hausse",warm:"Marché dynamique",stable:"Marché stable",cool:"Marché en baisse"};
       const icons={hot:"🔥",warm:"📈",stable:"🔵",cool:"❄️"};
@@ -246,12 +260,12 @@ async function analyser(code){
       document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));
       tab.classList.add("active");
       D("tab-"+tab.dataset.tab).classList.add("active");
-      renderTabCharts(tab.dataset.tab,dpeD,trD,brD,tend);
+      renderTabCharts(tab.dataset.tab,dpeN,trN,brN,tendN);
     });
   });
 
   // Render initial tab
-  renderTabCharts("marche",dpeD,trD,brD,tend);
+  renderTabCharts("marche",dpeN,trN,brN,tendN);
 }
 
 function renderTabCharts(tab,dpeD,trD,brD,tend){
