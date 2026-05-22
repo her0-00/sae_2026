@@ -23,22 +23,27 @@ def charger_dept(dept: str, conn):
     inserted = 0
     with conn.cursor() as cur:
         for feat in features:
-            props = feat["properties"]
-            code  = props.get("code", "")
-            nom   = props.get("nom", "")
-            geom  = feat.get("geometry")
+            props      = feat["properties"]
+            code       = props.get("code", "")
+            nom        = props.get("nom", "")
+            region     = props.get("codeRegion")        # ex: "84" (Auvergne-Rhône-Alpes)
+            population = props.get("population")        # nombre d'habitants
+            geom       = feat.get("geometry")
             if not code or not geom:
                 continue
             cur.execute(
                 """
-                INSERT INTO communes_stats (commune_code, nom_commune, departement_code, geom)
-                VALUES (%s, %s, %s, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))
+                INSERT INTO communes_stats
+                    (commune_code, nom_commune, departement_code, region_code, population, geom)
+                VALUES (%s, %s, %s, %s, %s, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))
                 ON CONFLICT (commune_code) DO UPDATE
                     SET nom_commune      = EXCLUDED.nom_commune,
                         departement_code = EXCLUDED.departement_code,
+                        region_code      = EXCLUDED.region_code,
+                        population       = EXCLUDED.population,
                         geom             = EXCLUDED.geom
                 """,
-                (code, nom, dept, json.dumps(geom)),
+                (code, nom, dept, region, population, json.dumps(geom)),
             )
             inserted += 1
     conn.commit()
