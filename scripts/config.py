@@ -5,16 +5,16 @@ Modifier ici les départements et années cibles.
 
 DEPARTEMENTS = [
     # Bretagne
-    "22",  # Côtes-d'Armor
-    "29",  # Finistère
-    "35",  # Ille-et-Vilaine
+    # "22",  # Côtes-d'Armor
+    # "29",  # Finistère
+    # "35",  # Ille-et-Vilaine
     "56",  # Morbihan
     # Pays de la Loire
-    "44",  # Loire-Atlantique
-    "49",  # Maine-et-Loire
-    "53",  # Mayenne
-    "72",  # Sarthe
-    "85",  # Vendée
+    # "44",  # Loire-Atlantique
+    # "49",  # Maine-et-Loire
+    # "53",  # Mayenne
+    # "72",  # Sarthe
+    # "85",  # Vendée
 ]
 
 ANNEES = [2021, 2022, 2023, 2024, 2025]

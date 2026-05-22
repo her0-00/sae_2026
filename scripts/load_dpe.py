@@ -30,6 +30,14 @@ def normaliser(addr: str) -> str:
 
 
 def charger_dpe(dept: str, conn) -> int:
+    # Supprimer les DPE existants pour ce département (idempotent)
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM dpe WHERE commune_code LIKE %s", (f"{dept}%",))
+        deleted = cur.rowcount
+    conn.commit()
+    if deleted:
+        log.info("  %d DPE existants supprimés [%s]", deleted, dept)
+
     after    = None
     page     = 0
     inserted = 0
@@ -44,8 +52,9 @@ def charger_dpe(dept: str, conn) -> int:
                 cur,
                 """INSERT INTO dpe
                    (numero_dpe,commune_code,adresse,adresse_normalisee,
-                    classe_energie,conso_energie,classe_ges,annee_dpe)
-                   VALUES %s ON CONFLICT DO NOTHING""",
+                    classe_energie,conso_energie,classe_ges,annee_dpe,
+                    type_batiment,annee_construction)
+                   VALUES %s""",
                 batch, page_size=1000,
             )
         conn.commit()
@@ -56,7 +65,8 @@ def charger_dpe(dept: str, conn) -> int:
         params = {
             "size":   10_000,
             "select": "numero_dpe,code_insee_ban,adresse_ban,etiquette_dpe,"
-                      "conso_5_usages_par_m2_ep,etiquette_ges,date_reception_dpe",
+                      "conso_5_usages_par_m2_ep,etiquette_ges,date_reception_dpe,"
+                      "type_batiment,annee_construction",
             "qs":     f"code_departement_ban:{dept}",
         }
         if after:
@@ -78,19 +88,28 @@ def charger_dpe(dept: str, conn) -> int:
             classe = str(row.get("etiquette_dpe") or "").strip().upper()
             if classe not in CLASSES_OK:
                 continue
-            code   = str(row.get("code_insee_ban") or "").strip().zfill(5)
-            adresse= str(row.get("adresse_ban") or "").strip()
-            conso_r= row.get("conso_5_usages_par_m2_ep")
+            code    = str(row.get("code_insee_ban") or "").strip().zfill(5)
+            adresse = str(row.get("adresse_ban") or "").strip()
+            conso_r = row.get("conso_5_usages_par_m2_ep")
             try:
                 conso = float(conso_r) if conso_r is not None else None
             except (ValueError, TypeError):
                 conso = None
             date_d = str(row.get("date_reception_dpe") or "")
-            annee  = int(date_d[:4]) if len(date_d) >= 4 and date_d[:4].isdigit() else None
+            annee_dpe = int(date_d[:4]) if len(date_d) >= 4 and date_d[:4].isdigit() else None
+            # Année de construction (entier direct dans l'API)
+            annee_c = row.get("annee_construction")
+            try:
+                annee_c = int(annee_c) if annee_c is not None else None
+            except (ValueError, TypeError):
+                annee_c = None
             batch.append((
                 str(row.get("numero_dpe") or ""), code, adresse,
                 normaliser(adresse), classe, conso,
-                str(row.get("etiquette_ges") or "").strip().upper() or None, annee,
+                str(row.get("etiquette_ges") or "").strip().upper() or None,
+                annee_dpe,
+                str(row.get("type_batiment") or "").strip().lower() or None,
+                annee_c,
             ))
             if len(batch) >= 2000:
                 flush()
