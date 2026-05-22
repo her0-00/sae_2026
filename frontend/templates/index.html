@@ -85,7 +85,7 @@ let charts = {};
 // ── Utilitaires ──────────────────────────────────────────────
 const fmt  = n => n == null ? "—" : new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
 const fmtN = n => n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n);
-const fmtPct = n => n == null ? "—" : n.toFixed(1) + " %";
+const fmtPct = n => n == null ? "—" : parseFloat(n).toFixed(1) + " %";
 const D = id => document.getElementById(id);
 
 function debounce(fn,ms=250){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
