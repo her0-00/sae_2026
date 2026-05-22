@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Estimateur de prix — ImmoBI{% endblock %}
+
+{% block head %}
+<style>
+  .hero { background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%); color: #fff; padding: 3rem 0 2rem; }
+  .hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+  .hero p  { opacity: .85; font-size: 1.05rem; }
+
+  .estimateur-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  .estimateur-form .btn { grid-column: 1 / -1; justify-self: start; margin-top: .5rem; }
+
+  #result-section { margin-top: 2rem; }
+
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+  @media (max-width: 640px) { .result-grid { grid-template-columns: 1fr; } }
+
+  .fourchette { display: flex; align-items: center; gap: .5rem; font-size: 1rem; margin-top: .5rem; }
+  .fourchette-arrow { color: var(--color-muted); }
+
+  /* Autocomplete */
+  .autocomplete-list {
+    position: absolute; z-index: 200;
+    background: #fff; border: 1px solid var(--color-border);
+    border-radius: var(--radius); box-shadow: var(--shadow-m);
+    list-style: none; max-height: 220px; overflow-y: auto; width: 100%; top: 100%;
+  }
+  .autocomplete-list li {
+    padding: .6rem 1rem; cursor: pointer; font-size: .9rem;
+  }
+  .autocomplete-list li:hover { background: var(--color-bg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>Est-ce un bon prix ?</h1>
+    <p>Comparez n'importe quel bien aux transactions réelles du marché français.</p>
+  </div>
+</section>
+
+<div class="container" style="padding-top:2rem; padding-bottom:3rem;">
+  <div class="card">
+    <h2 style="margin-bottom:1.2rem; font-size:1.15rem;">Paramètres du bien</h2>
+    <form id="form-estimateur" class="estimateur-form">
+      <div class="form-group" style="position:relative;">
+        <label for="input-commune">Commune</label>
+        <input id="input-commune" type="text" placeholder="Lyon, Paris…" autocomplete="off" required />
+        <input id="hidden-commune" type="hidden" />
+      </div>
+      <div class="form-group">
+        <label for="input-type">Type de bien</label>
+        <select id="input-type">
+          <option value="Appartement">Appartement</option>
+          <option value="Maison">Maison</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="input-surface">Surface (m²)</label>
+        <input id="input-surface" type="number" min="5" max="2000" placeholder="65" required />
+      </div>
+      <div class="form-group">
+        <label for="input-pieces">Nb. pièces</label>
+        <input id="input-pieces" type="number" min="1" max="20" placeholder="3" />
+      </div>
+      <div class="form-group">
+        <label for="input-prix">Prix demandé (€) <small style="color:var(--color-muted)">optionnel</small></label>
+        <input id="input-prix" type="number" min="0" placeholder="280000" />
+      </div>
+      <button type="submit" class="btn btn-primary">Analyser →</button>
+    </form>
+  </div>
+
+  <div id="result-section"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+import { estimer } from "/static/js/api.js";
+import { formatEuro, formatNombre, scoreLabel, scoreIcon, dpePillHTML,
+         showSpinner, showError, setupCommuneAutocomplete } from "/static/js/utils.js";
+
+setupCommuneAutocomplete("input-commune", "hidden-commune");
+
+document.getElementById("form-estimateur").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const communeCode = document.getElementById("hidden-commune").value;
+  if (!communeCode) {
+    showError("result-section", "Sélectionnez une commune dans la liste déroulante.");
+    return;
+  }
+
+  showSpinner("result-section");
+
+  const body = {
+    commune_code: communeCode,
+    surface:      parseFloat(document.getElementById("input-surface").value),
+    type_local:   document.getElementById("input-type").value,
+    prix_demande: parseFloat(document.getElementById("input-prix").value) || null,
+  };
+
+  try {
+    const data = await estimer(body);
+    renderResult(data, body);
+  } catch (err) {
+    showError("result-section", err.message);
+  }
+});
+
+function renderResult(d, body) {
+  const score   = d.score_deal;
+  const section = document.getElementById("result-section");
+
+  const scoreHtml = score ? `
+    <div class="score-card ${score}" style="margin-bottom:1.5rem;">
+      <div class="score-icon">${scoreIcon(score)}</div>
+      <div>
+        <div class="score-label">${scoreLabel(score)}</div>
+        <div class="score-sub">Par rapport aux transactions comparables de cette commune</div>
+      </div>
+      <div style="margin-left:auto;">
+        <span class="badge badge-${score}">${scoreLabel(score)}</span>
+      </div>
+    </div>` : "";
+
+  section.innerHTML = `
+    ${scoreHtml}
+    <div class="result-grid">
+      <div class="card">
+        <h3 style="margin-bottom:1rem;font-size:1rem;">Estimation du marché</h3>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-value">${formatEuro(d.prix_estime)}</div>
+            <div class="stat-label">Prix estimé</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">${formatEuro(d.prix_m2_median)} /m²</div>
+            <div class="stat-label">Prix médian commune</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value">${formatNombre(d.nb_comparables)}</div>
+            <div class="stat-label">Biens comparables</div>
+          </div>
+        </div>
+        <p style="margin-top:1rem; font-size:.9rem; color:var(--color-muted);">
+          Fourchette :
+          <strong>${formatEuro(d.fourchette_basse)}</strong>
+          →
+          <strong>${formatEuro(d.fourchette_haute)}</strong>
+        </p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:1rem;font-size:1rem;">Répartition des prix (percentiles)</h3>
+        <div style="height:140px; position:relative;" id="chart-range"></div>
+        <p style="font-size:.8rem;color:var(--color-muted);margin-top:.5rem;">
+          P25 = ${formatEuro(d.prix_m2_q25)}/m² · P50 = ${formatEuro(d.prix_m2_median)}/m² · P75 = ${formatEuro(d.prix_m2_q75)}/m²
+        </p>
+        <p style="margin-top:.5rem;">
+          <a href="/commune?code=${body.commune_code}" class="btn btn-outline" style="font-size:.85rem;padding:.4rem 1rem;">
+            Voir analyse complète →
+          </a>
+        </p>
+      </div>
+    </div>
+  `;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Analyse commune — ImmoBI{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  .page-header { padding: 2rem 0 1.5rem; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+  .search-bar  { display: flex; gap: .75rem; align-items: flex-end; flex-wrap: wrap; margin-top:1rem; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+  @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+  canvas { max-height: 280px; }
+  .autocomplete-list {
+    position: absolute; z-index: 200;
+    background: #fff; border: 1px solid var(--color-border);
+    border-radius: var(--radius); box-shadow: var(--shadow-m);
+    list-style: none; max-height: 220px; overflow-y: auto; width: 100%; top: 100%;
+  }
+  .autocomplete-list li { padding: .6rem 1rem; cursor: pointer; font-size: .9rem; }
+  .autocomplete-list li:hover { background: var(--color-bg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1 style="font-size:1.6rem;">Analyse de commune</h1>
+    <div class="search-bar">
+      <div class="form-group" style="position:relative; min-width:220px;">
+        <label>Commune</label>
+        <input id="input-commune" type="text" placeholder="Lyon, Bordeaux…" autocomplete="off" />
+        <input id="hidden-commune" type="hidden" />
+      </div>
+      <div class="form-group">
+        <label>Type de bien</label>
+        <select id="filter-type">
+          <option value="Appartement">Appartement</option>
+          <option value="Maison">Maison</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btn-analyser">Analyser</button>
+    </div>
+  </div>
+</div>
+
+<div class="container" style="padding-bottom:3rem;">
+  <div id="resume-section" style="margin-top:1.5rem;"></div>
+  <div class="charts-grid" id="charts-grid" style="display:none;">
+    <div class="card"><h3 style="margin-bottom:1rem;font-size:.95rem;">Tendance des prix</h3>        <canvas id="chart-tendances"></canvas></div>
+    <div class="card"><h3 style="margin-bottom:1rem;font-size:.95rem;">Impact de la classe DPE</h3>  <canvas id="chart-dpe"></canvas></div>
+    <div class="card"><h3 style="margin-bottom:1rem;font-size:.95rem;">Impact du bruit aérien</h3>  <canvas id="chart-bruit"></canvas></div>
+    <div class="card"><h3 style="margin-bottom:1rem;font-size:.95rem;">Prime de transport</h3>       <canvas id="chart-transport"></canvas></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+import { getResumeCommune, getAnalyseDPE, getAnalyseBruit, getAnalyseTransport, getAnalyseTendances } from "/static/js/api.js";
+import { formatEuro, formatNombre, dpePillHTML, showSpinner, showError, setupCommuneAutocomplete } from "/static/js/utils.js";
+
+const charts = {};
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+setupCommuneAutocomplete("input-commune", "hidden-commune");
+
+// Pré-remplir depuis l'URL ?code=XXXXX
+const urlCode = new URLSearchParams(location.search).get("code");
+if (urlCode) {
+  document.getElementById("hidden-commune").value = urlCode;
+  analyser(urlCode);
+}
+
+document.getElementById("btn-analyser").addEventListener("click", () => {
+  const code = document.getElementById("hidden-commune").value;
+  if (!code) { showError("resume-section", "Sélectionnez une commune."); return; }
+  analyser(code);
+});
+
+async function analyser(code) {
+  const type = document.getElementById("filter-type").value;
+  showSpinner("resume-section");
+  document.getElementById("charts-grid").style.display = "none";
+
+  try {
+    const [resume, dpe, bruit, transport, tendances] = await Promise.all([
+      getResumeCommune(code),
+      getAnalyseDPE({ commune_code: code, type }),
+      getAnalyseBruit({ commune_code: code, type }),
+      getAnalyseTransport({ commune_code: code, type }),
+      getAnalyseTendances({ commune_code: code, type }),
+    ]);
+
+    renderResume(resume);
+    renderChartTendances(tendances);
+    renderChartDPE(dpe);
+    renderChartBruit(bruit);
+    renderChartTransport(transport);
+    document.getElementById("charts-grid").style.display = "grid";
+
+  } catch (err) {
+    showError("resume-section", err.message);
+  }
+}
+
+function renderResume(r) {
+  document.getElementById("resume-section").innerHTML = `
+    <div class="card">
+      <h2 style="font-size:1.3rem;margin-bottom:1rem;">${r.nom_commune}
+        <small style="font-weight:400;color:var(--color-muted);font-size:.9rem;">${r.commune_code}</small>
+      </h2>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-value">${formatEuro(r.prix_m2_median)} /m²</div><div class="stat-label">Prix médian</div></div>
+        <div class="stat-box"><div class="stat-value">${formatNombre(r.nb_transactions)}</div><div class="stat-label">Transactions (12 mois)</div></div>
+        <div class="stat-box"><div class="stat-value">${r.revenu_median ? formatEuro(r.revenu_median) : "—"}</div><div class="stat-label">Revenu médian/an</div></div>
+        <div class="stat-box"><div class="stat-value">${r.taux_chomage != null ? r.taux_chomage + "%" : "—"}</div><div class="stat-label">Taux de chômage</div></div>
+        <div class="stat-box"><div class="stat-value">${formatNombre(r.population) || "—"}</div><div class="stat-label">Population</div></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderChartTendances(data) {
+  destroyChart("chart-tendances");
+  if (!data.length) return;
+  const ctx = document.getElementById("chart-tendances").getContext("2d");
+  charts["chart-tendances"] = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: data.map(d => d.trimestre),
+      datasets: [{
+        label: "Prix médian /m²",
+        data: data.map(d => d.prix_m2_median),
+        borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.1)",
+        fill: true, tension: 0.3, pointRadius: 3,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } } },
+  });
+}
+
+function renderChartDPE(data) {
+  destroyChart("chart-dpe");
+  if (!data.length) return;
+  const DPE_COLORS = { A:"#00843d",B:"#50b24a",C:"#a4c437",D:"#f7d11e",E:"#ef8023",F:"#e3001b",G:"#7b001e" };
+  const ctx = document.getElementById("chart-dpe").getContext("2d");
+  charts["chart-dpe"] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: data.map(d => d.dpe_classe),
+      datasets: [{
+        label: "Prix médian /m²",
+        data: data.map(d => d.prix_m2_median),
+        backgroundColor: data.map(d => DPE_COLORS[d.dpe_classe] || "#999"),
+        borderRadius: 4,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } } },
+  });
+}
+
+function renderChartBruit(data) {
+  destroyChart("chart-bruit");
+  if (!data.length) return;
+  const ctx = document.getElementById("chart-bruit").getContext("2d");
+  charts["chart-bruit"] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: data.map(d => d.peb_zone || "Hors zone"),
+      datasets: [{
+        label: "Prix médian /m²",
+        data: data.map(d => d.prix_m2_median),
+        backgroundColor: data.map(d =>
+          d.peb_zone === "A" ? "#dc2626" :
+          d.peb_zone === "B" ? "#f97316" :
+          d.peb_zone === "C" ? "#fbbf24" :
+          d.peb_zone === "D" ? "#facc15" : "#22c55e"
+        ),
+        borderRadius: 4,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } } },
+  });
+}
+
+function renderChartTransport(data) {
+  destroyChart("chart-transport");
+  if (!data.length) return;
+  const ctx = document.getElementById("chart-transport").getContext("2d");
+  charts["chart-transport"] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: data.map(d => d.tranche_distance),
+      datasets: [{
+        label: "Prix médian /m²",
+        data: data.map(d => d.prix_m2_median),
+        backgroundColor: "#6366f1",
+        borderRadius: 4,
+      }],
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } } },
+  });
+}
+</script>
+{% endblock %}

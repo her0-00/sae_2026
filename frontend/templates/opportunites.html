@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Opportunités — ImmoBI{% endblock %}
+
+{% block head %}
+<style>
+  .page-header { padding: 2rem 0 1.5rem; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+  .filter-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-top:1rem; }
+  .filter-form .btn { align-self: flex-end; }
+  .score-bar { height: 8px; border-radius: 4px; background: var(--color-border); }
+  .score-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2563eb, #16a34a); }
+  .rank-badge {
+    display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center;
+    border-radius: 50%; font-weight: 700; font-size: .9rem; flex-shrink: 0;
+    background: var(--color-primary); color: #fff;
+  }
+  .rank-badge.gold   { background: #f59e0b; }
+  .rank-badge.silver { background: #94a3b8; }
+  .rank-badge.bronze { background: #b45309; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1 style="font-size:1.6rem;">Finder d'opportunités</h1>
+    <p style="color:var(--color-muted);margin-top:.3rem;">Identifiez les communes offrant le meilleur rapport qualité/prix.</p>
+    <form id="form-opps" class="filter-form">
+      <div class="form-group">
+        <label>Département</label>
+        <input id="filter-dept" type="text" placeholder="69" maxlength="3" required />
+      </div>
+      <div class="form-group">
+        <label>Type de bien</label>
+        <select id="filter-type">
+          <option value="Appartement">Appartement</option>
+          <option value="Maison">Maison</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Budget max (€)</label>
+        <input id="filter-budget" type="number" placeholder="300000" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Surface (m²)</label>
+        <input id="filter-surface" type="number" placeholder="60" min="5" />
+      </div>
+      <button type="submit" class="btn btn-primary">Trouver →</button>
+    </form>
+  </div>
+</div>
+
+<div class="container" style="padding: 2rem 0 3rem;">
+  <div id="result-section"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+import { getOpportunites } from "/static/js/api.js";
+import { formatEuro, formatNombre, showSpinner, showError } from "/static/js/utils.js";
+
+document.getElementById("form-opps").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const dept    = document.getElementById("filter-dept").value.trim();
+  const type    = document.getElementById("filter-type").value;
+  const budget  = document.getElementById("filter-budget").value;
+  const surface = document.getElementById("filter-surface").value;
+
+  showSpinner("result-section");
+
+  const params = { departement: dept, type };
+  if (budget)  params.budget_max = budget;
+  if (surface) params.surface    = surface;
+
+  try {
+    const data = await getOpportunites(params);
+    renderResultats(data);
+  } catch (err) {
+    showError("result-section", err.message);
+  }
+});
+
+function renderResultats(rows) {
+  if (!rows.length) {
+    document.getElementById("result-section").innerHTML =
+      `<div class="alert alert-info">Aucune commune trouvée pour ces critères.</div>`;
+    return;
+  }
+
+  const rankBadge = (i) => {
+    const cls = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
+    return `<span class="rank-badge ${cls}">${i + 1}</span>`;
+  };
+
+  const rows_html = rows.map((r, i) => `
+    <tr>
+      <td>${rankBadge(i)}</td>
+      <td>
+        <a href="/commune?code=${r.commune_code}" style="color:var(--color-primary);font-weight:600;">
+          ${r.nom_commune}
+        </a>
+        <div style="font-size:.8rem;color:var(--color-muted);">${r.commune_code} · Dept. ${r.departement_code}</div>
+      </td>
+      <td>${formatEuro(r.prix_m2_median)} /m²</td>
+      <td>${r.revenu_median ? formatEuro(r.revenu_median) : "—"}</td>
+      <td>${formatNombre(r.nb_transactions)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <div class="score-bar" style="flex:1;">
+            <div class="score-fill" style="width:${r.score_total}%;"></div>
+          </div>
+          <span style="font-weight:700;font-size:.9rem;">${r.score_total}</span>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  document.getElementById("result-section").innerHTML = `
+    <div class="card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Commune</th>
+            <th>Prix /m²</th>
+            <th>Revenu médian</th>
+            <th>Transactions</th>
+            <th>Score /100</th>
+          </tr>
+        </thead>
+        <tbody>${rows_html}</tbody>
+      </table>
+    </div>
+    <p style="margin-top:.75rem;font-size:.8rem;color:var(--color-muted);">
+      Score composite : 50% prix sous la médiane du département · 50% revenu médian relatif.
+    </p>
+  `;
+}
+</script>
+{% endblock %}
