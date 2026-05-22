@@ -21,7 +21,7 @@ Un pipeline complet en 9 étapes automatisées permet de collecter, nettoyer et 
 Une API REST modulaire et performante, structurée autour de plusieurs Blueprints :
 *   **Transactions (`/api/transactions`)** : Lecture et filtrage des données DVF.
 *   **Estimateur (`/api/estimateur`)** : Algorithme d'estimation de la valeur foncière en fonction des caractéristiques du bien et de sa localisation.
-*   **Carte (`/api/carte`)** : Fourniture des données géographiques (GeoJSON) des prix au m² pour le rendu cartographique.
+*   **Carte (`/api/carte`) [MIS À JOUR]** : Fourniture des données géographiques (GeoJSON) des prix au m² pour le rendu cartographique avec **calcul géométrique instantané du centroïde géographique** (`ST_Centroid`) pour chaque commune.
 *   **Analyses (`/api/analyses`)** : Agrégats statistiques pour les graphiques.
 *   **Opportunités (`/api/opportunites`)** : Algorithme d'identification des bonnes affaires immobilières (prix bas, revenus élevés, faible bruit).
 *   **Communes (`/api/communes`)** : Moteur de recherche d'INSEE/communes.
@@ -31,9 +31,9 @@ Une API REST modulaire et performante, structurée autour de plusieurs Blueprint
 
 ## 3. 🎨 Frontend Interactif (`frontend/`)
 Une interface web monopage (SPA) moderne et épurée, connectée aux API Flask :
-*   **Page d'Accueil / Estimateur (`index.html`)** : Formulaire interactif permettant d'estimer un bien immobilier en temps réel.
-*   **Carte des Prix (`carte.html`)** : Carte choroplèthe interactive affichant le prix au m² médian par commune.
-*   **Analyse Commune (`commune.html`)** : Dossier d'analyse détaillé (population, chômage, prix médians).
+*   **Page d'Accueil / Estimateur (`index.html`) [MIS À JOUR]** : Formulaire interactif permettant d'estimer un bien immobilier en temps réel. Intègre désormais une **visualisation optimisée des courbes d'évolution temporelle** avec mise à l'échelle dynamique intelligente de l'axe Y et corrections de contrastes ergonomiques sur l'autocomplétion en mode sombre.
+*   **Carte des Prix (`carte.html`) [MIS À JOUR]** : Carte choroplèthe interactive affichant le prix au m² médian par commune avec **bascule dynamique entre vue Plan et vue Satellite haute définition (Esri World Imagery)**, contrôle d'opacité automatisé selon la couche active, et un **bouton d'immersion satellitaire vers Google Maps** basé sur les coordonnées exactes du centroïde de la commune survolée.
+*   **Analyse Commune (`commune.html`) [MIS À JOUR]** : Dossier d'analyse détaillé (population, chômage, prix médians) doté de **graphiques élargis et réactifs (Chart.js)** avec gestion automatique d'un rembourrage intelligent (padding) sur l'axe Y pour éviter le tassement des données extrêmes.
 *   **Opportunités (`opportunites.html`)** : Outil de recherche multicritère des meilleures opportunités du marché.
 *   **Explorateur de Base de Données (`explorer.html`) [NOUVEAU]** : 
     *   **Barre latérale** : Liste dynamique des tables avec recherche textuelle et compteurs de lignes.

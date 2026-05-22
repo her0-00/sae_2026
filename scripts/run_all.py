@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger("run_all")
 
-ETAPES_ORDRE = ["communes", "dvf", "dpe", "poi", "filosofi", "enrichissement"]
+ETAPES_ORDRE = ["communes", "dvf", "dpe", "peb", "poi", "filosofi", "enrichissement"]
 
 
 def main():
@@ -62,6 +62,8 @@ def main():
                 from scripts.load_dvf import main as run
             elif etape == "dpe":
                 from scripts.load_dpe import main as run
+            elif etape == "peb":
+                from scripts.load_peb import main as run
             elif etape == "poi":
                 from scripts.load_poi import main as run
             elif etape == "filosofi":

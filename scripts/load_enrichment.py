@@ -34,7 +34,7 @@ def enrich_dpe(conn):
     conn.commit()
     log.info("  Passe 1 (adresse exacte)   : %d transactions", n1)
 
-    # Passe 2 : jointure spatiale — DPE le plus proche dans un rayon de 30m
+    # Passe 2 : jointure spatiale — DPE le plus proche dans un rayon de 30m (approx 0.0003 deg)
     with conn.cursor() as cur:
         cur.execute("""
             UPDATE transactions t
@@ -48,7 +48,7 @@ def enrich_dpe(conn):
                 FROM transactions t2
                 JOIN dpe d2
                   ON d2.geom IS NOT NULL
-                 AND ST_DWithin(t2.geom::geography, d2.geom::geography, 30)
+                  AND ST_DWithin(t2.geom, d2.geom, 0.0003)
                 WHERE t2.geom IS NOT NULL
                   AND t2.dpe_classe IS NULL
                   AND d2.classe_energie IS NOT NULL
@@ -65,22 +65,55 @@ def enrich_dpe(conn):
 
 def enrich_distances(conn):
     with conn.cursor() as cur:
+        # Check if we have gares
+        cur.execute("SELECT 1 FROM points_interet WHERE type='gare' LIMIT 1")
+        if cur.fetchone():
+            cur.execute("""
+                UPDATE transactions t SET dist_gare_m = (
+                    SELECT ST_Distance(t.geom::geography, p.geom::geography)::integer
+                    FROM points_interet p WHERE p.type='gare'
+                    ORDER BY t.geom <-> p.geom LIMIT 1
+                ) WHERE t.geom IS NOT NULL AND t.dist_gare_m IS NULL
+            """)
+            log.info("✓ Distances gares : %d", cur.rowcount)
+        else:
+            log.info("✓ Aucun point d'intérêt 'gare' trouvé dans points_interet. Saut de l'étape.")
+
+        # Check if we have écoles
+        cur.execute("SELECT 1 FROM points_interet WHERE type='ecole' LIMIT 1")
+        if cur.fetchone():
+            cur.execute("""
+                UPDATE transactions t SET dist_ecole_m = (
+                    SELECT ST_Distance(t.geom::geography, p.geom::geography)::integer
+                    FROM points_interet p WHERE p.type='ecole'
+                    ORDER BY t.geom <-> p.geom LIMIT 1
+                ) WHERE t.geom IS NOT NULL AND t.dist_ecole_m IS NULL
+            """)
+            log.info("✓ Distances écoles : %d", cur.rowcount)
+        else:
+            log.info("✓ Aucun point d'intérêt 'ecole' trouvé dans points_interet. Saut de l'étape.")
+    conn.commit()
+
+
+def enrich_peb(conn):
+    with conn.cursor() as cur:
         cur.execute("""
-            UPDATE transactions t SET dist_gare_m = (
-                SELECT ST_Distance(t.geom::geography, p.geom::geography)::integer
-                FROM points_interet p WHERE p.type='gare'
-                ORDER BY t.geom <-> p.geom LIMIT 1
-            ) WHERE t.geom IS NOT NULL AND t.dist_gare_m IS NULL
+            UPDATE transactions t
+            SET peb_zone     = p.zone,
+                peb_aeroport = p.aeroport
+            FROM (
+                SELECT DISTINCT ON (t2.id)
+                    t2.id,
+                    p2.zone,
+                    p2.aeroport
+                FROM transactions t2
+                JOIN peb_zones p2 ON ST_Within(t2.geom, p2.geom)
+                WHERE t2.geom IS NOT NULL AND t2.peb_zone IS NULL
+                ORDER BY t2.id, p2.zone ASC
+            ) p
+            WHERE t.id = p.id
         """)
-        log.info("✓ Distances gares : %d", cur.rowcount)
-        cur.execute("""
-            UPDATE transactions t SET dist_ecole_m = (
-                SELECT ST_Distance(t.geom::geography, p.geom::geography)::integer
-                FROM points_interet p WHERE p.type='ecole'
-                ORDER BY t.geom <-> p.geom LIMIT 1
-            ) WHERE t.geom IS NOT NULL AND t.dist_ecole_m IS NULL
-        """)
-        log.info("✓ Distances écoles : %d", cur.rowcount)
+        log.info("✓ Enrichissement PEB : %d transactions", cur.rowcount)
     conn.commit()
 
 
@@ -98,6 +131,7 @@ def rapport(conn):
         ("Transactions",             "SELECT COUNT(*) FROM transactions"),
         ("Geocodees",                "SELECT COUNT(*) FROM transactions WHERE geom IS NOT NULL"),
         ("Avec DPE",                 "SELECT COUNT(*) FROM transactions WHERE dpe_classe IS NOT NULL"),
+        ("Avec PEB",                 "SELECT COUNT(*) FROM transactions WHERE peb_zone IS NOT NULL"),
         ("Avec dist. gare",          "SELECT COUNT(*) FROM transactions WHERE dist_gare_m IS NOT NULL"),
         ("Departements",             "SELECT COUNT(DISTINCT departement_code) FROM transactions"),
         ("Annees",                   "SELECT COUNT(DISTINCT EXTRACT(YEAR FROM date_mutation)) FROM transactions"),
@@ -120,6 +154,7 @@ def main():
     conn = get_conn()
     enrich_dpe(conn)
     enrich_distances(conn)
+    enrich_peb(conn)
     refresh_views(conn)
     rapport(conn)
     conn.close()
