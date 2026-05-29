@@ -44,3 +44,6 @@ htmlcov/
 
 # Logs
 *.log
+
+# Dagster
+dagster_home/

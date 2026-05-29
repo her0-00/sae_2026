@@ -273,22 +273,122 @@
     // ── Simple Parser Markdown pour le Copilot ───────────────────
     function parseMarkdown(text) {
         if (!text) return "";
-        let html = text
-            // Remplacer les retours à la ligne doubles
-            .replace(/\n\n/g, "</p><p>")
-            // Gras
-            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-            // Code block multi-lignes
-            .replace(/```([a-z]*)\n([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
-            // Code block en ligne
-            .replace(/`([^`]+)`/g, "<code>$1</code>")
-            // Listes à puces (lignes commençant par - ou *)
-            .replace(/\n\s*[-*]\s+(.*)/g, "<li>$1</li>");
+        
+        let html = text;
+        
+        // 1. Échapper le HTML brut pour des raisons de sécurité (XSS)
+        html = html
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
             
-        // Envelopper les éléments li dans des ul
-        html = html.replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>");
-        // Envelopper dans des paragraphes
-        return `<p>${html}</p>`.replace(/<p>\s*<\/p>/g, "");
+        // 2. Extraire et protéger les blocs de code multi-lignes
+        const codeBlocks = [];
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+            const index = codeBlocks.length;
+            codeBlocks.push(`<pre><code class="language-${lang}">${code.trim()}</code></pre>`);
+            return `__CODE_BLOCK_${index}__`;
+        });
+        
+        // 3. Extraire et protéger les blocs de code en ligne
+        const inlineCode = [];
+        html = html.replace(/`([^`]+)`/g, (match, code) => {
+            const index = inlineCode.length;
+            inlineCode.push(`<code>${code}</code>`);
+            return `__INLINE_CODE_${index}__`;
+        });
+        
+        // 4. Titres (H1, H2, H3)
+        html = html
+            .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gim, "<h1>$1</h1>");
+            
+        // 5. Gras & Italique
+        html = html
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+            .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+            .replace(/_([^_]+)_/g, "<em>$1</em>");
+            
+        // 6. Liens hypertextes [texte](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        
+        // 7. Listes ordonnées et non-ordonnées
+        const lines = html.split('\n');
+        let inList = false;
+        let inNumList = false;
+        let processedLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            
+            // Liste à puces (- ou *)
+            if (line.match(/^\s*[-*+]\s+(.*)/)) {
+                if (inNumList) {
+                    processedLines.push('</ol>');
+                    inNumList = false;
+                }
+                if (!inList) {
+                    processedLines.push('<ul>');
+                    inList = true;
+                }
+                line = line.replace(/^\s*[-*+]\s+(.*)/, '<li>$1</li>');
+            } 
+            // Liste numérotée (1., 2.)
+            else if (line.match(/^\s*\d+\.\s+(.*)/)) {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                }
+                if (!inNumList) {
+                    processedLines.push('<ol>');
+                    inNumList = true;
+                }
+                line = line.replace(/^\s*\d+\.\s+(.*)/, '<li>$1</li>');
+            } 
+            // Ligne classique
+            else {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                }
+                if (inNumList) {
+                    processedLines.push('</ol>');
+                    inNumList = false;
+                }
+            }
+            
+            processedLines.push(line);
+        }
+        
+        if (inList) processedLines.push('</ul>');
+        if (inNumList) processedLines.push('</ol>');
+        
+        html = processedLines.join('\n');
+        
+        // 8. Paragraphes & sauts de ligne simples
+        const paragraphs = html.split(/\n{2,}/);
+        html = paragraphs.map(p => {
+            p = p.trim();
+            if (!p) return "";
+            // Si la ligne commence par une balise block, on ne l'enveloppe pas dans <p>
+            if (p.match(/^(<h[1-6]|<ul|<ol|<li|<pre|<blockquote|<div|<p)/i)) {
+                return p.replace(/\n/g, "<br>");
+            }
+            return `<p>${p.replace(/\n/g, "<br>")}</p>`;
+        }).filter(Boolean).join("");
+        
+        // 9. Restaurer le code en ligne et les blocs de code
+        inlineCode.forEach((code, idx) => {
+            html = html.replace(`__INLINE_CODE_${idx}__`, code);
+        });
+        
+        codeBlocks.forEach((code, idx) => {
+            html = html.replace(`__CODE_BLOCK_${idx}__`, code);
+        });
+        
+        return html;
     }
 
     // ── Construction du DOM du Widget ─────────────────────────────
@@ -308,8 +408,10 @@
         </div>
         <div class="immobi-chat-messages" id="immobi-chat-messages">
             <div class="immobi-msg immobi-msg-assistant">
-                Bonjour ! Je suis **ImmoBI Copilot**. 🏠✨<br><br>
-                Je peux interroger notre base de données pour vous donner des prix réels, des analyses de quartiers, ou rédiger des **arguments de négociation** basés sur les passoires thermiques (DPE) ou le bruit (PEB).<br><br>
+                Bonjour ! Je suis **ImmoBI Copilot**. 🏠✨
+
+                Je peux interroger notre base de données pour vous donner des prix réels, des analyses de quartiers, ou rédiger des **arguments de négociation** basés sur les passoires thermiques (DPE) ou le bruit (PEB).
+
                 *Comment puis-je vous aider aujourd'hui ?*
             </div>
         </div>
