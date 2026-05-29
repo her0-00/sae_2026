@@ -180,6 +180,17 @@
         .immobi-msg li {
             margin-bottom: 0.25rem;
         }
+        .immobi-msg h1, .immobi-msg h2, .immobi-msg h3 {
+            color: #e2e8f0;
+            font-weight: 700;
+            margin: 0.6rem 0 0.3rem 0;
+            line-height: 1.3;
+        }
+        .immobi-msg h1 { font-size: 1rem; }
+        .immobi-msg h2 { font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.2rem; }
+        .immobi-msg h3 { font-size: 0.88rem; color: #a5b4fc; }
+        .immobi-msg em { color: #cbd5e1; font-style: italic; }
+        .immobi-msg a { color: #818cf8; text-decoration: underline; }
         
         .immobi-chat-input-panel {
             padding: 0.85rem 1.1rem;
@@ -407,13 +418,7 @@
             <button class="immobi-chat-close" title="Fermer">✕</button>
         </div>
         <div class="immobi-chat-messages" id="immobi-chat-messages">
-            <div class="immobi-msg immobi-msg-assistant">
-                Bonjour ! Je suis **ImmoBI Copilot**. 🏠✨
-
-                Je peux interroger notre base de données pour vous donner des prix réels, des analyses de quartiers, ou rédiger des **arguments de négociation** basés sur les passoires thermiques (DPE) ou le bruit (PEB).
-
-                *Comment puis-je vous aider aujourd'hui ?*
-            </div>
+            <div class="immobi-msg immobi-msg-assistant" data-markdown="**ImmoBI Copilot** — outil de négociation immobilière 🏠&#10;&#10;Posez une question précise, obtenez un verdict chiffré :&#10;&#10;- *« Appartement 65m² à 280 000€ à Vannes, c'est négociable ? »*&#10;- *« Quels leviers de négo pour une maison DPE F à Lorient ? »*&#10;- *« Prix du marché appartement proche gare à Hennebont »*"></div>
         </div>
         <div class="immobi-chat-input-panel">
             <input type="text" class="immobi-chat-input" id="immobi-chat-input" placeholder="Posez une question sur Vannes, Hennebont..." autocomplete="off">
@@ -431,9 +436,13 @@
     const chatInputEl = document.getElementById("immobi-chat-input");
     const chatSendEl = document.getElementById("immobi-chat-send");
 
-    // Formater le message de bienvenue initial
-    const firstMsg = chatMessagesEl.querySelector(".immobi-msg-assistant");
-    firstMsg.innerHTML = parseMarkdown(firstMsg.innerHTML);
+    // Formater le message de bienvenue initial (depuis l'attribut data-markdown)
+    const firstMsg = chatMessagesEl.querySelector(".immobi-msg-assistant[data-markdown]");
+    if (firstMsg) {
+        const md = firstMsg.getAttribute("data-markdown")
+            .replace(/&#10;/g, "\n");
+        firstMsg.innerHTML = parseMarkdown(md);
+    }
 
     // ── Gestionnaires d'évènements ────────────────────────────────
     chatBubble.addEventListener("click", () => {

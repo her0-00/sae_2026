@@ -10,7 +10,7 @@ from ..db import query
 bp = Blueprint("chat", __name__)
 log = logging.getLogger("chat")
 
-# ── Singleton client — créé une seule fois, réutilisé sur toutes les requêtes ──
+# ── Singleton client ───────────────────────────────────────────────────────────
 _client: AzureOpenAI | None = None
 
 def _get_client() -> AzureOpenAI | None:
@@ -25,90 +25,238 @@ def _get_client() -> AzureOpenAI | None:
     return _client
 
 
-def _build_db_context(message: str) -> str:
+# ── Schéma DB injecté dans le prompt SQL ──────────────────────────────────────
+_SCHEMA = """
+Tables PostgreSQL disponibles (base ImmoBI — données immobilières françaises) :
+
+**transactions** (mutations immobilières DVF) :
+  commune_code   TEXT     -- code INSEE de la commune (ex: '56260' pour Vannes)
+  date_mutation  DATE     -- date de la vente
+  type_local     TEXT     -- 'Appartement', 'Maison', 'Local'
+  surface_bati   FLOAT    -- surface habitable en m²
+  nb_pieces      INT      -- nombre de pièces
+  valeur_fonciere FLOAT   -- prix de vente total en €
+  prix_m2        FLOAT    -- prix par m² (peut être NULL)
+  dpe_classe     TEXT     -- classe DPE : 'A','B','C','D','E','F','G' (peut être NULL)
+  dpe_conso      FLOAT    -- consommation kWh/m²/an
+  peb_zone       TEXT     -- zone bruit aéroport (NULL si hors zone)
+  peb_aeroport   TEXT     -- nom de l'aéroport (NULL si hors zone)
+  dist_gare_m    FLOAT    -- distance gare la plus proche en mètres
+  dist_ecole_m   FLOAT    -- distance école la plus proche en mètres
+  est_valide     BOOLEAN  -- ⚠ TOUJOURS filtrer WHERE est_valide = TRUE
+
+**communes_stats** (données territoriales INSEE) :
+  commune_code   TEXT     -- code INSEE
+  nom_commune    TEXT     -- nom en MAJUSCULES ex: 'VANNES', 'LORIENT', 'HENNEBONT'
+  departement_code TEXT   -- ex: '56', '29', '35'
+  population     INT
+  revenu_median  DECIMAL  -- revenu médian annuel €
+  taux_chomage   DECIMAL  -- taux chômage %
+
+**dpe** (diagnostics ADEME) :
+  commune_code       TEXT
+  adresse_normalisee TEXT  -- clé de jointure avec transactions
+  classe_energie     TEXT  -- 'A' à 'G'
+  conso_energie      FLOAT
+  classe_ges         TEXT
+  type_batiment      TEXT
+  annee_construction INT
+  annee_dpe          INT
+
+RÈGLES CRITIQUES :
+- nom_commune est en MAJUSCULES → utiliser lower(nom_commune) = 'vannes' pour chercher
+- Toujours filtrer: WHERE est_valide = TRUE (sur transactions)
+- Toujours utiliser PERCENTILE_CONT(0.5) pour les médianes (jamais AVG pour les prix)
+- Limiter avec LIMIT 50 maximum
+"""
+
+_SQL_SYSTEM = f"""Tu es un expert SQL PostgreSQL spécialisé en données immobilières.
+Ta mission : générer une requête SELECT PostgreSQL pour répondre à la question.
+
+Réponds UNIQUEMENT avec la requête SQL entre balises ```sql ```. Aucun autre texte.
+
+{_SCHEMA}
+
+EXEMPLES :
+
+Q: Prix médian appartement à Vannes
+```sql
+SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) AS prix_m2_median,
+       COUNT(*) AS nb_transactions,
+       MAX(EXTRACT(YEAR FROM t.date_mutation))::INT AS annee_max
+FROM transactions t
+JOIN communes_stats c ON t.commune_code = c.commune_code
+WHERE lower(c.nom_commune) = 'vannes'
+  AND t.type_local = 'Appartement'
+  AND t.est_valide = TRUE
+  AND t.prix_m2 IS NOT NULL
+```
+
+Q: Appartement Vannes proche gare, distribution DPE
+```sql
+SELECT t.dpe_classe,
+       COUNT(*) AS nb,
+       ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) AS prix_m2_median,
+       ROUND(AVG(t.dist_gare_m)::NUMERIC, 0) AS dist_gare_moy_m
+FROM transactions t
+JOIN communes_stats c ON t.commune_code = c.commune_code
+WHERE lower(c.nom_commune) = 'vannes'
+  AND t.type_local = 'Appartement'
+  AND t.est_valide = TRUE
+  AND t.prix_m2 IS NOT NULL
+  AND t.dist_gare_m <= 1000
+  AND t.dpe_classe IS NOT NULL
+GROUP BY t.dpe_classe
+ORDER BY t.dpe_classe
+```
+
+Q: Évolution prix maison Lorient 3 ans
+```sql
+SELECT DATE_TRUNC('year', date_mutation)::DATE AS annee,
+       COUNT(*) AS nb_ventes,
+       ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY prix_m2)::NUMERIC, 0) AS prix_m2_median
+FROM transactions t
+JOIN communes_stats c ON t.commune_code = c.commune_code
+WHERE lower(c.nom_commune) = 'lorient'
+  AND t.type_local = 'Maison'
+  AND t.est_valide = TRUE
+  AND t.prix_m2 IS NOT NULL
+  AND t.date_mutation >= NOW() - INTERVAL '3 years'
+GROUP BY annee
+ORDER BY annee
+```
+"""
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _extract_sql(text: str) -> str:
+    """Extrait le SQL depuis les balises ```sql ``` ou en brut."""
+    m = re.search(r'```sql\s*(.*?)\s*```', text, re.DOTALL | re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r'```\s*(SELECT|WITH)(.*?)\s*```', text, re.DOTALL | re.IGNORECASE)
+    if m:
+        return (m.group(1) + m.group(2)).strip()
+    text = text.strip()
+    if text.upper().startswith(('SELECT', 'WITH')):
+        return text
+    return ""
+
+
+def _call_llm_sync(client: AzureOpenAI, deployment: str, messages: list,
+                   max_tokens: int = 500, temperature: float = 0.0):
+    """Appel LLM non-streaming compatible modèles standard et raisonnement (o1)."""
+    try:
+        return client.chat.completions.create(
+            model=deployment,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+    except Exception as e:
+        err = str(e)
+        if any(k in err for k in ("max_tokens", "temperature", "unsupported_parameter")):
+            return client.chat.completions.create(
+                model=deployment,
+                messages=messages,
+                max_completion_tokens=max_tokens,
+            )
+        raise
+
+
+def _text_to_sql_with_retry(question: str, client: AzureOpenAI,
+                             deployment: str, max_retries: int = 3) -> tuple[str, list[dict], str]:
     """
-    Détecte les noms de communes dans le message et retourne un bloc
-    de contexte enrichi en une seule requête SQL.
+    Phase 1 : génère du SQL depuis la question, l'exécute, retry auto si erreur.
+    Retourne (sql_utilisé, résultats, message_erreur)
     """
-    words = re.findall(r'[a-zA-ZÀ-ÿ\-]+', message)
-    candidates = list({w.lower() for w in words if len(w) >= 4})
-    if not candidates:
-        return ""
+    conv = [
+        {"role": "system", "content": _SQL_SYSTEM},
+        {"role": "user",   "content": f"Question: {question}"},
+    ]
+    last_sql   = ""
+    last_error = ""
 
-    # Une seule requête qui récupère tout : communes + prix + bruit + DPE
-    rows = query(
-        """
-        SELECT
-            c.commune_code,
-            c.nom_commune,
-            c.departement_code,
-            c.population,
-            c.revenu_median,
-            c.taux_chomage,
-            (SELECT ROUND(AVG(p.prix_m2_median))::integer
-             FROM prix_m2_par_commune p
-             WHERE p.commune_code = c.commune_code
-               AND p.type_local = 'Appartement'
-               AND p.annee = (SELECT MAX(annee) FROM prix_m2_par_commune
-                              WHERE commune_code = c.commune_code)
-            ) AS prix_appart,
-            (SELECT ROUND(AVG(p.prix_m2_median))::integer
-             FROM prix_m2_par_commune p
-             WHERE p.commune_code = c.commune_code
-               AND p.type_local = 'Maison'
-               AND p.annee = (SELECT MAX(annee) FROM prix_m2_par_commune
-                              WHERE commune_code = c.commune_code)
-            ) AS prix_maison,
-            (SELECT ROUND(COALESCE(
-                COUNT(CASE WHEN t.peb_zone IS NOT NULL THEN 1 END) * 100.0
-                / NULLIF(COUNT(*), 0), 0)::numeric, 1)
-             FROM transactions t
-             WHERE t.commune_code = c.commune_code AND t.est_valide = TRUE
-            ) AS peb_pct,
-            (SELECT STRING_AGG(DISTINCT t.peb_aeroport, ', ')
-                    FILTER (WHERE t.peb_aeroport IS NOT NULL)
-             FROM transactions t
-             WHERE t.commune_code = c.commune_code AND t.est_valide = TRUE
-            ) AS peb_aeroports,
-            (SELECT ROUND(AVG(
-                CASE d.dpe_classe
-                  WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3
-                  WHEN 'D' THEN 4 WHEN 'E' THEN 5 WHEN 'F' THEN 6 WHEN 'G' THEN 7
-                END))::integer
-             FROM transactions d
-             WHERE d.commune_code = c.commune_code
-               AND d.est_valide = TRUE AND d.dpe_classe IS NOT NULL
-            ) AS avg_dpe
-        FROM communes_stats c
-        WHERE lower(c.nom_commune) = ANY(%s)
-        LIMIT 3
-        """,
-        (candidates,)
-    )
+    for attempt in range(max_retries):
+        # Injecter le feedback d'erreur lors des retries
+        if last_error and attempt > 0:
+            conv.append({"role": "assistant", "content": f"```sql\n{last_sql}\n```"})
+            conv.append({
+                "role": "user",
+                "content": (
+                    f"La requête précédente a échoué avec l'erreur PostgreSQL suivante :\n"
+                    f"{last_error}\n\n"
+                    f"Corrige la requête SQL en tenant compte de cette erreur."
+                )
+            })
+            log.info("[Text-to-SQL] Retry %d/%d — erreur précédente: %s", attempt, max_retries, last_error[:120])
 
-    if not rows:
-        return ""
+        try:
+            resp = _call_llm_sync(client, deployment, conv, max_tokens=600, temperature=0.0)
+            raw  = resp.choices[0].message.content or ""
+            sql  = _extract_sql(raw)
+            last_sql = sql
 
-    CLASSES = ["?", "A", "B", "C", "D", "E", "F", "G"]
-    ctx = "=== DONNÉES IMMOBILIÈRES RÉELLES ===\n"
-    for r in rows:
-        ctx += f"Ville : {r['nom_commune']} ({r['commune_code']}) — Dept. {r['departement_code']}\n"
-        ctx += f"- Population : {r['population']} hab.\n"
-        ctx += f"- Revenu médian : {float(r['revenu_median']) if r['revenu_median'] else 'N/D'} €/an\n"
-        ctx += f"- Taux de chômage : {float(r['taux_chomage']) if r['taux_chomage'] else 'N/D'} %\n"
-        if r['prix_appart']:
-            ctx += f"- Prix m² médian Appartement : {r['prix_appart']} €/m²\n"
-        if r['prix_maison']:
-            ctx += f"- Prix m² médian Maison : {r['prix_maison']} €/m²\n"
-        peb = float(r['peb_pct']) if r['peb_pct'] else 0
-        if peb > 0:
-            ctx += f"- Nuisance sonore PEB : {peb}% des ventes (aéroport {r['peb_aeroports']})\n"
-        else:
-            ctx += "- Nuisance sonore : Aucune zone PEB détectée\n"
-        if r['avg_dpe']:
-            idx = min(7, max(1, r['avg_dpe']))
-            ctx += f"- DPE moyen : Classe {CLASSES[idx]}\n"
-        ctx += "\n"
+            if not sql:
+                last_error = "Aucun SQL valide extrait de la réponse du modèle."
+                log.warning("[Text-to-SQL] Pas de SQL extrait: %s", raw[:200])
+                continue
+
+            # Sécurité : SELECT / WITH uniquement
+            first_word = sql.strip().split()[0].upper()
+            if first_word not in ("SELECT", "WITH"):
+                last_error = "Seules les requêtes SELECT/WITH sont autorisées."
+                log.warning("[Text-to-SQL] Requête non-SELECT bloquée: %s", sql[:100])
+                continue
+
+            log.info("[Text-to-SQL] Tentative %d — SQL: %s", attempt + 1, sql[:150])
+            results = query(sql)
+            log.info("[Text-to-SQL] ✅ Succès — %d lignes", len(results or []))
+            return sql, results or [], ""
+
+        except Exception as e:
+            err_str = str(e)
+            # Nettoyer l'erreur psycopg2 pour le LLM (garder seulement la première ligne utile)
+            last_error = err_str.split('\n')[0].strip()
+            log.warning("[Text-to-SQL] Erreur SQL tentative %d: %s", attempt + 1, last_error)
+
+    log.error("[Text-to-SQL] Échec après %d tentatives. Dernière erreur: %s", max_retries, last_error)
+    return last_sql, [], last_error
+
+
+def _format_results_as_context(results: list[dict], sql: str, error: str) -> str:
+    """Formate les résultats SQL en bloc de contexte lisible pour le LLM."""
+    if error and not results:
+        return (
+            f"⚠ Aucune donnée disponible (erreur après {3} tentatives SQL).\n"
+            f"Erreur : {error}\n"
+            f"Informe l'utilisateur que tu ne peux pas répondre précisément "
+            f"et suggère de reformuler la question avec un nom de commune.\n"
+        )
+
+    if not results:
+        return "Aucun résultat trouvé dans la base de données pour cette requête.\n"
+
+    cols = list(results[0].keys())
+    ctx  = "=== RÉSULTATS REQUÊTE BASE IMMOBI ===\n"
+    ctx += f"SQL : {sql[:300]}{'...' if len(sql) > 300 else ''}\n"
+    ctx += f"Lignes retournées : {len(results)}\n\n"
+
+    # En-tête
+    ctx += " | ".join(cols) + "\n"
+    ctx += "-" * min(80, sum(len(c) + 3 for c in cols)) + "\n"
+
+    # Données (max 30 lignes)
+    for row in results[:30]:
+        ctx += " | ".join(
+            str(round(float(v), 2)) if isinstance(v, float) else str(v)
+            for v in row.values()
+        ) + "\n"
+
+    if len(results) > 30:
+        ctx += f"... ({len(results) - 30} lignes supplémentaires non affichées)\n"
+
     return ctx
 
 
@@ -118,57 +266,80 @@ def _build_system_prompt(db_context: str) -> str:
     now = datetime.now()
     date_str = f"{now.day} {months_fr[now.month - 1]} {now.year}"
 
-    prompt = f"""Tu es ImmoBI Copilot, un assistant expert en immobilier en France et en négociation d'achat.
-Nous sommes le {date_str}.
+    prompt = f"""Tu es ImmoBI Copilot, un outil d'aide à la négociation immobilière.
+Date : {date_str}.
 
-Rôle : analyser des projets immobiliers, valider des budgets, fournir des synthèses territoriales chiffrées, rédiger des arguments de négociation.
-Style : chaleureux, structuré, précis. Utilise des listes à puces et du gras. Réponses concises.
+## MISSION
+Transformer les données de la base ImmoBI en arguments de négociation concrets et chiffrés.
+Tu es un outil, PAS un assistant conversationnel. Sois direct, précis, utile.
 
-Règles de négociation :
-- DPE F ou G → décote -8% à -15% pour financer les travaux (~450 €/m²).
-- Zone PEB active → décote -5% à -10%.
-- Prix demandé > médiane locale → conseille de négocier fermement.
+## FORMAT DE RÉPONSE OBLIGATOIRE
+Réponds TOUJOURS avec ce format exact :
 
-Si des données sont fournies ci-dessous, utilise-les comme unique vérité du marché.
+**🎯 Verdict** : [1 phrase tranchée : bon deal / marché tendu / fort levier de négo]
+
+**📊 Prix de référence**
+- Médiane locale : X €/m²
+- Budget estimé pour ce bien : X € (si surface mentionnée)
+
+**🔧 Leviers de négociation**
+- [Argument 1 chiffré, ex: DPE F → décote -10% soit -XXX €]
+- [Argument 2 chiffré]
+- [Argument 3 si pertinent]
+
+**✅ Action recommandée** : [1 phrase concrète et immédiate]
+
+## RÈGLES STRICTES
+- MAX 200 mots. Zéro remplissage.
+- INTERDIT : "Bonjour", "Je suis là", "N'hésitez pas", "En conclusion", "En espérant"
+- Utilise UNIQUEMENT les données fournies ci-dessous comme vérité du marché.
+- Si aucune donnée n'est disponible, dis-le en 1 ligne et pose 1 question précise.
+- Décotes applicables : DPE F/G → -8% à -15%, PEB actif → -5% à -10%, prix > médiane → négocier fermement.
 """
     if db_context:
         prompt += f"\n{db_context}"
     return prompt
 
 
+# ── Route principale ───────────────────────────────────────────────────────────
+
 @bp.post("")
 def chat_copilot():
-    data = request.get_json(force=True) or {}
+    data     = request.get_json(force=True) or {}
     messages = data.get("messages", [])
     if not messages:
         return jsonify({"error": "Messages requis"}), 400
 
     deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
-    client = _get_client()
+    client     = _get_client()
 
     # Mode dev : clés non configurées
     if not client or not deployment:
         return jsonify({"choices": [{"message": {
             "role": "assistant",
-            "content": "✨ **ImmoBI Copilot** — Configurez vos clés Azure OpenAI dans `.env` :\n```\nAZURE_OPENAI_KEY=...\nAZURE_OPENAI_ENDPOINT=...\nAZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o\n```"
+            "content": (
+                "✨ **ImmoBI Copilot** — Configurez vos clés Azure OpenAI dans `.env` :\n"
+                "```\nAZURE_OPENAI_KEY=...\nAZURE_OPENAI_ENDPOINT=...\n"
+                "AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o\n```"
+            )
         }}]})
 
-    # Extraction du dernier message utilisateur
     latest = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
 
-    # Contexte DB en 1 seule requête
-    db_context = _build_db_context(latest) if latest else ""
+    # ── Phase 1 : Text-to-SQL avec retry ──────────────────────────────────────
+    sql_used, db_results, sql_error = _text_to_sql_with_retry(latest, client, deployment)
+    db_context    = _format_results_as_context(db_results, sql_used, sql_error)
     system_prompt = _build_system_prompt(db_context)
-    api_messages = [{"role": "system", "content": system_prompt}] + messages
+    api_messages  = [{"role": "system", "content": system_prompt}] + messages
 
-    # ── Streaming SSE ──────────────────────────────────────────────
+    # ── Phase 2 : Réponse en streaming ────────────────────────────────────────
     def generate():
         try:
             try:
                 stream = client.chat.completions.create(
                     model=deployment,
                     messages=api_messages,
-                    max_tokens=600,
+                    max_tokens=1400,
                     temperature=0.7,
                     stream=True,
                 )
@@ -178,7 +349,7 @@ def chat_copilot():
                     stream = client.chat.completions.create(
                         model=deployment,
                         messages=api_messages,
-                        max_completion_tokens=600,
+                        max_completion_tokens=1400,
                         stream=True,
                     )
                 else:
@@ -189,7 +360,7 @@ def chat_copilot():
                     yield f"data: {json.dumps({'c': chunk.choices[0].delta.content})}\n\n"
 
         except Exception as e:
-            log.error("Erreur Azure OpenAI : %s", e)
+            log.error("Erreur Azure OpenAI (streaming) : %s", e)
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
         finally:
             yield "data: [DONE]\n\n"
