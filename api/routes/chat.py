@@ -105,16 +105,22 @@ def chat_copilot():
                 else:
                     db_context += "- Risque/Nuisance Sonore: Calme, préservé des couloirs de bruit réglementaires\n"
                 
-                # DPE/GES moyens
+                # DPE/GES moyens (DPE depuis les transactions réelles, GES depuis la table DPE)
                 dpe_ges = query(
                     """
                     SELECT 
-                        ROUND(AVG(CASE dpe_classe WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5 WHEN 'F' THEN 6 WHEN 'G' THEN 7 END))::integer as avg_dpe,
-                        ROUND(AVG(CASE classe_ges WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5 WHEN 'F' THEN 6 WHEN 'G' THEN 7 END))::integer as avg_ges
-                    FROM transactions
-                    WHERE commune_code = %s AND est_valide = TRUE AND dpe_classe IS NOT NULL
+                        (
+                            SELECT ROUND(AVG(CASE dpe_classe WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5 WHEN 'F' THEN 6 WHEN 'G' THEN 7 END))::integer
+                            FROM transactions
+                            WHERE commune_code = %s AND est_valide = TRUE AND dpe_classe IS NOT NULL
+                        ) as avg_dpe,
+                        (
+                            SELECT ROUND(AVG(CASE classe_ges WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 WHEN 'D' THEN 4 WHEN 'E' THEN 5 WHEN 'F' THEN 6 WHEN 'G' THEN 7 END))::integer
+                            FROM dpe
+                            WHERE commune_code = %s AND classe_ges IS NOT NULL
+                        ) as avg_ges
                     """,
-                    (code,),
+                    (code, code),
                     fetchone=True
                 )
                 classes = ["?", "A", "B", "C", "D", "E", "F", "G"]
