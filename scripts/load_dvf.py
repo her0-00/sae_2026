@@ -70,6 +70,19 @@ def charger_dvf(dept: str, annee: int, conn) -> int:
         df["prix_m2"].between(100, 50_000)
     ].copy()
 
+    # Filtrer les communes inconnues (protection FK)
+    with conn.cursor() as cur:
+        cur.execute("SELECT commune_code FROM communes_stats WHERE departement_code = %s", (dept,))
+        valid_codes = {row[0] for row in cur.fetchall()}
+    if not valid_codes:
+        log.warning("  Aucune commune chargée pour le dép. %s — lancez d'abord l'étape communes", dept)
+        return 0
+    before = len(df)
+    df = df[df["code_commune"].isin(valid_codes)].copy()
+    skipped = before - len(df)
+    if skipped:
+        log.warning("  %d transactions ignorées (commune absente de communes_stats)", skipped)
+
     # Supprimer les données existantes pour ce dept+année
     with conn.cursor() as cur:
         cur.execute(
@@ -150,6 +163,7 @@ def main():
                 total += charger_dvf(dept, annee, conn)
             except Exception as e:
                 log.error("[%s/%s] %s", dept, annee, e)
+                conn.rollback()
     conn.close()
     log.info("TOTAL %d transactions", total)
 
