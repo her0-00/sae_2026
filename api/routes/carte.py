@@ -38,6 +38,8 @@ def prix_m2_geojson():
             p.nb_transactions,
             dpe_stats.avg_dpe,
             bruit_stats.pct_bruit,
+            dpe_ges_stats.avg_ges,
+            dpe_ges_stats.avg_annee,
             ST_Y(ST_Centroid(c.geom)) AS lat,
             ST_X(ST_Centroid(c.geom)) AS lng,
             ST_AsGeoJSON(c.geom)::json AS geometry
@@ -72,6 +74,25 @@ def prix_m2_geojson():
             WHERE est_valide = TRUE
             GROUP BY commune_code
         ) bruit_stats ON bruit_stats.commune_code = c.commune_code
+        LEFT JOIN (
+            SELECT 
+                commune_code,
+                ROUND(AVG(
+                    CASE classe_ges
+                        WHEN 'A' THEN 1.0
+                        WHEN 'B' THEN 2.0
+                        WHEN 'C' THEN 3.0
+                        WHEN 'D' THEN 4.0
+                        WHEN 'E' THEN 5.0
+                        WHEN 'F' THEN 6.0
+                        WHEN 'G' THEN 7.0
+                    END
+                )::numeric, 1) as avg_ges,
+                ROUND(AVG(annee_construction))::integer as avg_annee
+            FROM dpe
+            WHERE classe_ges IS NOT NULL OR annee_construction IS NOT NULL
+            GROUP BY commune_code
+        ) dpe_ges_stats ON dpe_ges_stats.commune_code = c.commune_code
         WHERE c.geom IS NOT NULL
           {dept_filter}
         ORDER BY c.nom_commune
@@ -98,13 +119,17 @@ def prix_m2_geojson():
                 "taux_chomage":   float(r["taux_chomage"]) if r["taux_chomage"] else None,
                 "avg_dpe":        float(r["avg_dpe"]) if r["avg_dpe"] else None,
                 "pct_bruit":      float(r["pct_bruit"]) if r["pct_bruit"] else 0.0,
+                "avg_ges":        float(r["avg_ges"]) if r["avg_ges"] else None,
+                "avg_annee":      int(r["avg_annee"]) if r["avg_annee"] else None,
                 
                 # Valeur à colorer
                 "metric_value":   float(r["prix_m2_median"]) if metric == "prix" else
                                   float(r["revenu_median"] or 0.0) if metric == "revenu" else
                                   float(r["taux_chomage"] or 0.0) if metric == "chomage" else
                                   float(r["avg_dpe"] or 0.0) if metric == "dpe" else
-                                  float(r["pct_bruit"] or 0.0) if metric == "bruit" else float(r["prix_m2_median"])
+                                  float(r["pct_bruit"] or 0.0) if metric == "bruit" else
+                                  float(r["avg_ges"] or 0.0) if metric == "ges" else
+                                  float(r["avg_annee"] or 0.0) if metric == "annee" else float(r["prix_m2_median"])
             },
         }
         for r in rows

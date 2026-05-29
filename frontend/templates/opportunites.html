@@ -83,6 +83,31 @@
         <label>Zone bruit max (%)</label>
         <input id="f-bruit" type="number" placeholder="ex: 10" min="0" max="100">
       </div>
+      <div class="form-group">
+        <label>GES Maximum</label>
+        <select id="f-ges">
+          <option value="">Tous les GES</option>
+          <option value="A">A — Très sobre</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+          <option value="E">E</option>
+          <option value="F">F</option>
+          <option value="G">G — Très polluant</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Époque de construction</label>
+        <select id="f-epoque">
+          <option value="">Toutes les époques</option>
+          <option value="avant_1949">Avant 1949 (Ancien)</option>
+          <option value="1949_1974">1949 – 1974 (Trente Glorieuses)</option>
+          <option value="1975_1989">1975 – 1989 (Post Choc)</option>
+          <option value="1990_2000">1990 – 2000 (Réglementé)</option>
+          <option value="2001_2012">2001 – 2012 (RT 2000/2005)</option>
+          <option value="apres_2012">Après 2012 (RT 2012+)</option>
+        </select>
+      </div>
       <button type="submit" class="btn btn-primary btn-lg" style="align-self:end; grid-column: span 1;">
         Trouver les opportunités →
       </button>
@@ -140,12 +165,20 @@ window.addEventListener("DOMContentLoaded", () => {
   const savedDpe = localStorage.getItem("property_dpe");
   if (savedDpe) document.getElementById("f-dpe").value = savedDpe;
 
+  const savedGes = localStorage.getItem("property_ges");
+  if (savedGes) document.getElementById("f-ges").value = savedGes;
+
+  const savedEpoque = localStorage.getItem("property_epoque");
+  if (savedEpoque) document.getElementById("f-epoque").value = savedEpoque;
+
   // Écouter les changements en direct
   document.getElementById("f-dept").addEventListener("input", e => localStorage.setItem("filter_dept", e.target.value));
   document.getElementById("f-type").addEventListener("change", e => localStorage.setItem("property_type", e.target.value));
   document.getElementById("f-budget").addEventListener("input", e => localStorage.setItem("property_prix", e.target.value));
   document.getElementById("f-surface").addEventListener("input", e => localStorage.setItem("property_surface", e.target.value));
   document.getElementById("f-dpe").addEventListener("change", e => localStorage.setItem("property_dpe", e.target.value));
+  document.getElementById("f-ges").addEventListener("change", e => localStorage.setItem("property_ges", e.target.value));
+  document.getElementById("f-epoque").addEventListener("change", e => localStorage.setItem("property_epoque", e.target.value));
 
   if (savedDept) {
     setTimeout(() => { document.getElementById("form").requestSubmit(); }, 100);
@@ -163,6 +196,8 @@ document.getElementById("form").addEventListener("submit",async e=>{
   const ecole   = document.getElementById("f-ecole").value;
   const chomage = document.getElementById("f-chomage").value;
   const bruit   = document.getElementById("f-bruit").value;
+  const ges     = document.getElementById("f-ges").value;
+  const epoque  = document.getElementById("f-epoque").value;
   const result  = document.getElementById("result");
 
   localStorage.setItem("filter_dept", dept);
@@ -170,6 +205,8 @@ document.getElementById("form").addEventListener("submit",async e=>{
   if (budget) localStorage.setItem("property_prix", budget);
   localStorage.setItem("property_surface", surface);
   if (dpe) localStorage.setItem("property_dpe", dpe);
+  if (ges) localStorage.setItem("property_ges", ges);
+  if (epoque) localStorage.setItem("property_epoque", epoque);
 
   result.innerHTML=`<div class="spinner"></div><p class="loading-text">Recherche et notation dans le département ${dept}…</p>`;
 
@@ -181,6 +218,8 @@ document.getElementById("form").addEventListener("submit",async e=>{
   if(ecole)   params.set("dist_ecole_max",ecole);
   if(chomage) params.set("chomage_max",chomage);
   if(bruit)   params.set("bruit_max",bruit);
+  if(ges)     params.set("ges_max",ges);
+  if(epoque)  params.set("epoque",epoque);
 
   try{
     const r = await fetch(API+"/api/opportunites?"+params);
@@ -225,6 +264,8 @@ function renderResultats(rows,dept,type){
           ${budgetCalc?`<span class="stat-pill" style="background:#fef3c7; border-color:#fde68a;" title="Budget estimé pour un logement de ${surfaceForm}m² basé sur le prix médian local.">🏠 ~${fmt(budgetCalc)} (${surfaceForm}m²) ⓘ</span>`:""}
           ${r.revenu_median?`<span class="stat-pill" title="Revenu disponible médian annuel par ménage (INSEE Filosofi) : 50% des ménages gagnent plus, 50% gagnent moins.">👥 Revenu : ${fmt(r.revenu_median)}/an ⓘ</span>`:""}
           ${r.taux_chomage!=null?`<span class="stat-pill" title="Taux de chômage au sens du recensement INSEE de la population active (15-64 ans) de la commune.">👔 Chômage : ${fmtP(r.taux_chomage)} ⓘ</span>`:""}
+          ${r.avg_ges?`<span class="stat-pill" style="background:rgba(0,132,61,0.05); color:#00843d;" title="Classe carbone moyenne (Gaz à Effet de Serre).">🌿 GES : ${["?","A","B","C","D","E","F","G"][Math.round(r.avg_ges)]} (${r.avg_ges.toFixed(1)}) ⓘ</span>`:""}
+          ${r.avg_annee?`<span class="stat-pill" style="background:rgba(180,83,9,0.05); color:#b45309;" title="Année de construction moyenne des logements.">🏛️ Époque : ~${r.avg_annee} ⓘ</span>`:""}
           <span class="stat-pill" title="Distance moyenne calculée sur toutes les transactions immobilières de la commune">🚂 Gare : ${r.avg_dist_gare != null ? fmtN(Math.round(r.avg_dist_gare)) + 'm' : '—'} ⓘ</span>
           <span class="stat-pill" title="Distance moyenne calculée sur toutes les transactions immobilières de la commune">🎓 École : ${r.avg_dist_ecole != null ? fmtN(Math.round(r.avg_dist_ecole)) + 'm' : '—'} ⓘ</span>
           <span class="stat-pill" style="${r.pct_bruit > 0 ? 'color:#dc2626;background:rgba(220,38,38,0.05);' : ''}" title="Plan d'Exposition au Bruit : pourcentage de transactions situées dans une zone de nuisances sonores aéroportuaires réglementaire.">🔇 PEB : ${r.pct_bruit != null ? r.pct_bruit.toFixed(1) + '%' : '—'} ⓘ</span>

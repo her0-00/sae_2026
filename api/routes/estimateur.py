@@ -19,7 +19,7 @@ def estimer():
     except (ValueError, TypeError):
         abort(422)
 
-    # Statistiques de la commune pour ce type de bien (12 derniers mois)
+    # Statistiques de la commune pour ce type de bien (24 derniers mois)
     stats = query(
         """
         SELECT
@@ -37,6 +37,26 @@ def estimer():
         (commune_code, type_local),
         fetchone=True,
     )
+
+    # Fallback si pas de transactions sur 24 mois
+    if not stats or not stats["median"] or int(stats["nb_comparables"]) < 3:
+        stats = query(
+            """
+            SELECT
+                COUNT(*)                                                AS nb_comparables,
+                ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY prix_m2)::NUMERIC, 0) AS q25,
+                ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY prix_m2)::NUMERIC, 0) AS median,
+                ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY prix_m2)::NUMERIC, 0) AS q75
+            FROM transactions
+            WHERE commune_code = %s
+              AND type_local   = %s
+              AND est_valide   = TRUE
+              AND prix_m2 IS NOT NULL
+              AND date_mutation >= NOW() - INTERVAL '60 months'
+            """,
+            (commune_code, type_local),
+            fetchone=True,
+        )
 
     if not stats or not stats["median"]:
         return jsonify({"error": "Pas assez de données pour cette commune"}), 404
@@ -65,6 +85,84 @@ def estimer():
                 score_deal = "cher"
         except (ValueError, TypeError):
             pass
+
+    # ── CALCULATEUR DE FACTURE ÉNERGÉTIQUE ──
+    dpe_conso_stats = query(
+        """
+        SELECT ROUND(AVG(conso_energie))::integer as avg_conso
+        FROM dpe
+        WHERE commune_code = %s
+          AND type_batiment = %s
+          AND conso_energie IS NOT NULL
+          AND conso_energie > 0
+        """,
+        (commune_code, type_local.lower()),
+        fetchone=True,
+    ) or {}
+    avg_conso = dpe_conso_stats.get("avg_conso") if dpe_conso_stats else None
+    
+    facture_energie_est = None
+    if avg_conso and surface:
+        # Tarif moyen de l'énergie en France : 0.25 € / kWh
+        facture_energie_est = round(avg_conso * surface * 0.25)
+
+    # ── IMPACT GES (CARBONE) SPÉCIFIQUE ──
+    ges_prix_m2 = None
+    ges_classe = data.get("ges_classe")
+    if ges_classe:
+        ges_row = query(
+            """
+            SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) as median
+            FROM transactions t
+            JOIN dpe d
+              ON t.commune_code = d.commune_code
+             AND t.dpe_conso = d.conso_energie
+             AND t.dpe_classe = d.classe_energie
+            WHERE t.commune_code = %s
+              AND t.type_local = %s
+              AND t.est_valide = TRUE
+              AND t.prix_m2 IS NOT NULL
+              AND d.classe_ges = %s
+            """,
+            (commune_code, type_local, ges_classe),
+            fetchone=True
+        )
+        if ges_row and ges_row["median"]:
+            ges_prix_m2 = float(ges_row["median"])
+
+    # ── IMPACT ÉPOQUE DE CONSTRUCTION SPÉCIFIQUE ──
+    epoque_prix_m2 = None
+    epoque = data.get("epoque")
+    if epoque:
+        year_bounds = {
+            'Avant 1949': (0, 1948),
+            '1949-1974': (1949, 1974),
+            '1975-1989': (1975, 1989),
+            '1990-2000': (1990, 2000),
+            '2001-2012': (2001, 2012),
+            'Après 2012': (2013, 2050)
+        }
+        bounds = year_bounds.get(epoque)
+        if bounds:
+            const_row = query(
+                """
+                SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) as median
+                FROM transactions t
+                JOIN dpe d
+                  ON t.commune_code = d.commune_code
+                 AND t.dpe_conso = d.conso_energie
+                 AND t.dpe_classe = d.classe_energie
+                WHERE t.commune_code = %s
+                  AND t.type_local = %s
+                  AND t.est_valide = TRUE
+                  AND t.prix_m2 IS NOT NULL
+                  AND d.annee_construction BETWEEN %s AND %s
+                """,
+                (commune_code, type_local, bounds[0], bounds[1]),
+                fetchone=True
+            )
+            if const_row and const_row["median"]:
+                epoque_prix_m2 = float(const_row["median"])
 
     # ── ENRICHISSEMENT : CONTEXTE LOCAL ──
     # 1. Proximité Transports & Écoles
@@ -129,7 +227,13 @@ def estimer():
         "nb_comparables":    int(stats["nb_comparables"]),
         "score_deal":        score_deal,
         
-        # Données enrichies de contexte
+        # Nouvelles données enrichies
+        "avg_conso":           avg_conso,
+        "facture_energie_est": facture_energie_est,
+        "ges_prix_m2":         ges_prix_m2,
+        "epoque_prix_m2":      epoque_prix_m2,
+        
+        # Données de contexte existantes
         "proximite": {
             "avg_dist_gare_m":  prox.get("avg_dist_gare_m"),
             "avg_dist_ecole_m": prox.get("avg_dist_ecole_m"),

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 
 <body>
@@ -53,6 +54,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     const API = "";
     let charts = {};
@@ -137,7 +139,7 @@
       const type = D("inp-type").value;
       D("result").innerHTML = `<div class="spinner"></div><p class="loading-text">Chargement de la fiche commune…</p>`;
 
-      const [resume, dpe, transport, bruit, tendances, ecole, pois] = await Promise.allSettled([
+      const [resume, dpe, transport, bruit, tendances, ecole, pois, ges, construction] = await Promise.allSettled([
         apiFetch(`/api/communes/${code}/resume`),
         apiFetch(`/api/analyses/dpe?commune_code=${code}&type=${type}`),
         apiFetch(`/api/analyses/transport?commune_code=${code}&type=${type}`),
@@ -145,6 +147,8 @@
         apiFetch(`/api/analyses/tendances?commune_code=${code}&type=${type}`),
         apiFetch(`/api/analyses/ecole?commune_code=${code}&type=${type}`),
         apiFetch(`/api/analyses/pois?commune_code=${code}`),
+        apiFetch(`/api/analyses/ges?commune_code=${code}&type=${type}`),
+        apiFetch(`/api/analyses/construction?commune_code=${code}&type=${type}`),
       ]);
 
       const r = resume.status === "fulfilled" ? resume.value : null;
@@ -161,7 +165,10 @@
       const brN = (bruit.status === "fulfilled" ? bruit.value : []).map(b => ({ ...b, prix_m2_median: parseFloat(b.prix_m2_median) || null }));
       const ecN = (ecole.status === "fulfilled" ? ecole.value : []).map(e => ({ ...e, prix_m2_median: parseFloat(e.prix_m2_median) || null }));
       const poisN = pois.status === "fulfilled" ? pois.value : [];
-      const tend = tendN, dpeD = dpeN, trD = trN, brD = brN, ecD = ecN, poisD = poisN;
+      const gesN = (ges.status === "fulfilled" ? ges.value : []).map(g => ({ ...g, prix_m2_median: parseFloat(g.prix_m2_median) || null }));
+      const constN = (construction.status === "fulfilled" ? construction.value : []).map(c => ({ ...c, prix_m2_median: parseFloat(c.prix_m2_median) || null }));
+      
+      const tend = tendN, dpeD = dpeN, trD = trN, brD = brN, ecD = ecN, poisD = poisN, gesD = gesN, constD = constN;
 
       D("h-commune").textContent = r.nom_commune || "Fiche commune";
 
@@ -207,9 +214,10 @@
   <!-- Tabs -->
   <div class="tabs" id="tabs">
     <div class="tab active" data-tab="marche">📊 Marché</div>
-    <div class="tab" data-tab="energie">⚡ Énergie (DPE)</div>
+    <div class="tab" data-tab="energie">⚡ Énergie (DPE/GES)</div>
     <div class="tab" data-tab="transport">🚂 Accès & Services</div>
     <div class="tab" data-tab="bruit">🔇 Bruit</div>
+    <div class="tab" data-tab="epoque">🏛️ Époque</div>
     <div class="tab" data-tab="socio">🏘️ Contexte</div>
   </div>
 
@@ -228,11 +236,11 @@
     ${tend.length >= 3 ? buildInsightTendance(tend) : ""}
   </div>
 
-  <!-- Tab: DPE -->
+  <!-- Tab: DPE & GES -->
   <div class="tab-pane" id="tab-energie">
     <div class="grid-2">
       <div class="card">
-        <div class="card-title">Prix médian /m² par classe énergétique</div>
+        <div class="card-title">Prix médian /m² par classe énergétique (DPE)</div>
         ${dpeD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-dpe"></canvas></div>`
           : `<div class="alert alert-info">Données DPE insuffisantes pour cette commune.</div>`}
       </div>
@@ -240,6 +248,18 @@
         <div class="card-title">Distribution des classes DPE</div>
         ${dpeD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-dpe-dist"></canvas></div>`
           : `<div class="alert alert-info">Données DPE insuffisantes.</div>`}
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top: 1.5rem;">
+      <div class="card">
+        <div class="card-title">Prix médian /m² par classe carbone (GES)</div>
+        ${gesD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-ges"></canvas></div>`
+          : `<div class="alert alert-info">Données GES insuffisantes pour cette commune.</div>`}
+      </div>
+      <div class="card">
+        <div class="card-title">Distribution des classes carbone (GES)</div>
+        ${gesD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-ges-dist"></canvas></div>`
+          : `<div class="alert alert-info">Données GES insuffisantes.</div>`}
       </div>
     </div>
     ${dpeD.length >= 2 ? buildInsightDPE(dpeD) : ""}
@@ -265,35 +285,40 @@
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title">Équipements répertoriés dans la commune (Gares & Écoles)</div>
-      ${poisD.length ? `
-      <div style="max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 700;">
-              <th style="padding: 0.5rem;">Catégorie</th>
-              <th style="padding: 0.5rem;">Nom de l'équipement</th>
-              <th style="padding: 0.5rem; text-align: right; cursor: help;" title="Distance calculée par rapport au centroïde géométrique (centre de gravité) de la commune">Distance approx. du centre ⓘ</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${poisD.map(p => `
-            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;">
-              <td style="padding: 0.6rem; font-weight: 600;">
-                ${p.type === 'gare' ? '🚂 Gare' : '🎓 Établissement scolaire'}
-              </td>
-              <td style="padding: 0.6rem; color: var(--text);">${p.nom || 'Sans nom'}</td>
-              <td style="padding: 0.6rem; text-align: right; color: var(--muted); font-weight: 600;">
-                ${fmtN(p.dist_centroid_m)} m
-              </td>
-            </tr>`).join("")}
-          </tbody>
-        </table>
+    <div class="grid-2">
+      <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--r);">
+        <div id="poi-map" style="height: 380px; width: 100%;"></div>
       </div>
-      <div style="font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; text-align: center; font-style: italic;">
-        * Les distances sont mesurées géospatialement par rapport au centroïde géométrique (centre de gravité) du contour de la commune.
-      </div>` : `<div class="alert alert-info">Aucun équipement (gare ou école) n'a été détecté à l'intérieur des contours de cette commune.</div>`}
+      <div class="card">
+        <div class="card-title">Équipements répertoriés dans la commune (Gares & Écoles)</div>
+        ${poisD.length ? `
+        <div style="max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 700;">
+                <th style="padding: 0.5rem;">Catégorie</th>
+                <th style="padding: 0.5rem;">Nom de l'équipement</th>
+                <th style="padding: 0.5rem; text-align: right; cursor: help;" title="Distance calculée par rapport au centroïde géométrique (centre de gravité) de la commune">Distance approx. du centre ⓘ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${poisD.map(p => `
+              <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;">
+                <td style="padding: 0.6rem; font-weight: 600;">
+                  ${p.type === 'gare' ? '🚂 Gare' : '🎓 Établissement scolaire'}
+                </td>
+                <td style="padding: 0.6rem; color: var(--text);">${p.nom || 'Sans nom'}</td>
+                <td style="padding: 0.6rem; text-align: right; color: var(--muted); font-weight: 600;">
+                  ${fmtN(p.dist_centroid_m)} m
+                </td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; text-align: center; font-style: italic;">
+          * Les distances sont mesurées géospatialement par rapport au centroïde géométrique (centre de gravité) du contour de la commune.
+        </div>` : `<div class="alert alert-info">Aucun équipement (gare ou école) n'a été détecté à l'intérieur des contours de cette commune.</div>`}
+      </div>
     </div>
   </div>
 
@@ -308,6 +333,22 @@
       <div class="card">
         <div class="card-title">Décote par zone PEB</div>
         ${buildInsightBruit(brD)}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Époque -->
+  <div class="tab-pane" id="tab-epoque">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Distribution des époques de construction</div>
+        ${constD.length >= 2 ? `<div style="position:relative;height:240px"><canvas id="chart-const-dist"></canvas></div>`
+          : `<div class="alert alert-info">Données de construction insuffisantes pour cette commune.</div>`}
+      </div>
+      <div class="card">
+        <div class="card-title">Prix médian au m² par époque de construction</div>
+        ${constD.length >= 2 ? `<div style="position:relative;height:240px"><canvas id="chart-const-prices"></canvas></div>`
+          : `<div class="alert alert-info">Données de construction insuffisantes pour cette commune.</div>`}
       </div>
     </div>
   </div>
@@ -335,15 +376,15 @@
           document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
           tab.classList.add("active");
           D("tab-" + tab.dataset.tab).classList.add("active");
-          renderTabCharts(tab.dataset.tab, dpeN, trN, brN, tendN, ecN);
+          renderTabCharts(tab.dataset.tab, dpeN, trN, brN, tendN, ecN, gesN, constN, poisN, r);
         });
       });
 
       // Render initial tab
-      renderTabCharts("marche", dpeN, trN, brN, tendN, ecN);
+      renderTabCharts("marche", dpeN, trN, brN, tendN, ecN, gesN, constN, poisN, r);
     }
 
-    function renderTabCharts(tab, dpeD, trD, brD, tend, ecD) {
+    function renderTabCharts(tab, dpeD, trD, brD, tend, ecD, gesD, constD, poisD, resume) {
       setTimeout(() => {
         if (tab === "marche" && tend.length >= 3) {
           destroyChart("chart-tend"); destroyChart("chart-vol");
@@ -363,32 +404,49 @@
             options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: "#f0f0f0" } } }, responsive: true, maintainAspectRatio: false }
           });
         }
-        if (tab === "energie" && dpeD.length >= 2) {
+        if (tab === "energie") {
           const DPE_COLORS = { A: "#00843d", B: "#50b24a", C: "#a4c437", D: "#f7d11e", E: "#ef8023", F: "#e3001b", G: "#7b001e" };
-          destroyChart("chart-dpe"); destroyChart("chart-dpe-dist");
-          charts["chart-dpe"] = new Chart(D("chart-dpe").getContext("2d"), {
-            type: "bar",
-            data: { labels: dpeD.map(d => d.dpe_classe), datasets: [{ data: dpeD.map(d => d.prix_m2_median), backgroundColor: dpeD.map(d => DPE_COLORS[d.dpe_classe] || "#999"), borderRadius: 4 }] },
-            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
-          });
-          charts["chart-dpe-dist"] = new Chart(D("chart-dpe-dist").getContext("2d"), {
-            type: "doughnut",
-            data: { labels: dpeD.map(d => "Classe " + d.dpe_classe), datasets: [{ data: dpeD.map(d => d.nb_transactions), backgroundColor: dpeD.map(d => DPE_COLORS[d.dpe_classe] || "#999") }] },
-            options: { plugins: { legend: { position: "right" } }, responsive: true, maintainAspectRatio: false }
-          });
+          if (dpeD && dpeD.length >= 2) {
+            destroyChart("chart-dpe"); destroyChart("chart-dpe-dist");
+            charts["chart-dpe"] = new Chart(D("chart-dpe").getContext("2d"), {
+              type: "bar",
+              data: { labels: dpeD.map(d => d.dpe_classe), datasets: [{ data: dpeD.map(d => d.prix_m2_median), backgroundColor: dpeD.map(d => DPE_COLORS[d.dpe_classe] || "#999"), borderRadius: 4 }] },
+              options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+            });
+            charts["chart-dpe-dist"] = new Chart(D("chart-dpe-dist").getContext("2d"), {
+              type: "doughnut",
+              data: { labels: dpeD.map(d => "Classe " + d.dpe_classe), datasets: [{ data: dpeD.map(d => d.nb_transactions), backgroundColor: dpeD.map(d => DPE_COLORS[d.dpe_classe] || "#999") }] },
+              options: { plugins: { legend: { position: "right" } }, responsive: true, maintainAspectRatio: false }
+            });
+          }
+          if (gesD && gesD.length >= 2) {
+            destroyChart("chart-ges"); destroyChart("chart-ges-dist");
+            charts["chart-ges"] = new Chart(D("chart-ges").getContext("2d"), {
+              type: "bar",
+              data: { labels: gesD.map(d => d.classe_ges), datasets: [{ data: gesD.map(d => d.prix_m2_median), backgroundColor: gesD.map(d => DPE_COLORS[d.classe_ges] || "#999"), borderRadius: 4 }] },
+              options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+            });
+            charts["chart-ges-dist"] = new Chart(D("chart-ges-dist").getContext("2d"), {
+              type: "doughnut",
+              data: { labels: gesD.map(d => "Classe " + d.classe_ges), datasets: [{ data: gesD.map(d => d.nb_transactions), backgroundColor: gesD.map(d => DPE_COLORS[d.classe_ges] || "#999") }] },
+              options: { plugins: { legend: { position: "right" } }, responsive: true, maintainAspectRatio: false }
+            });
+          }
         }
-        if (tab === "transport" && trD.length >= 2) {
-          destroyChart("chart-tr");
-          const ORDER = { "0-500m": 0, "500m-1km": 1, "1-2km": 2, "2-5km": 3, ">5km": 4 };
-          const sorted = [...trD].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
-          charts["chart-tr"] = new Chart(D("chart-tr").getContext("2d"), {
-            type: "bar",
-            data: { labels: sorted.map(d => d.tranche_distance), datasets: [{ label: "Prix /m²", data: sorted.map(d => d.prix_m2_median), backgroundColor: sorted.map((_, i) => `rgba(124,58,237,${1 - i * 0.15})`), borderRadius: 4 }] },
-            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
-          });
-          // Écoles Chart
+        if (tab === "transport") {
+          if (trD && trD.length >= 2) {
+            destroyChart("chart-tr");
+            const ORDER = { "0-500m": 0, "500m-1km": 1, "1-2km": 2, "2-5km": 3, ">5km": 4 };
+            const sorted = [...trD].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
+            charts["chart-tr"] = new Chart(D("chart-tr").getContext("2d"), {
+              type: "bar",
+              data: { labels: sorted.map(d => d.tranche_distance), datasets: [{ label: "Prix /m²", data: sorted.map(d => d.prix_m2_median), backgroundColor: sorted.map((_, i) => `rgba(124,58,237,${1 - i * 0.15})`), borderRadius: 4 }] },
+              options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+            });
+          }
           if (ecD && ecD.length >= 2) {
             destroyChart("chart-ecole");
+            const ORDER = { "0-500m": 0, "500m-1km": 1, "1-2km": 2, "2-5km": 3, ">5km": 4 };
             const sortedEc = [...ecD].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
             charts["chart-ecole"] = new Chart(D("chart-ecole").getContext("2d"), {
               type: "bar",
@@ -396,6 +454,77 @@
               options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
             });
           }
+          // LEAFLET POI MINI-MAP
+          if (poisD && poisD.length > 0 && resume) {
+            let lats = poisD.map(p => parseFloat(p.latitude)).filter(Boolean);
+            let lngs = poisD.map(p => parseFloat(p.longitude)).filter(Boolean);
+            let centerLat = lats.reduce((s, x) => s + x, 0) / lats.length;
+            let centerLng = lngs.reduce((s, x) => s + x, 0) / lngs.length;
+            
+            setTimeout(() => {
+              if (window.poiMapInstance) {
+                window.poiMapInstance.remove();
+              }
+              const mapInstance = L.map("poi-map").setView([centerLat || 47.2, centerLng || -1.5], 13);
+              window.poiMapInstance = mapInstance;
+              
+              L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+              }).addTo(mapInstance);
+              
+              const bounds = [];
+              poisD.forEach(p => {
+                const isGare = p.type === 'gare';
+                const iconText = isGare ? '🚂' : '🎓';
+                const markerColor = isGare ? '#7c3aed' : '#2563eb';
+                
+                const htmlIcon = L.divIcon({
+                  className: 'custom-div-icon',
+                  html: `<div style="background:${markerColor}; color:white; font-size:0.85rem; padding: 4px; border-radius:50%; width: 24px; height: 24px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">${iconText}</div>`,
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12]
+                });
+                
+                const pLat = parseFloat(p.latitude);
+                const pLng = parseFloat(p.longitude);
+                if (pLat && pLng) {
+                  L.marker([pLat, pLng], { icon: htmlIcon })
+                   .bindPopup(`<strong>${isGare ? '🚂 Gare' : '🎓 École'}</strong><br>${p.nom || 'Sans nom'}`)
+                   .addTo(mapInstance);
+                  bounds.push([pLat, pLng]);
+                }
+              });
+              if (bounds.length > 0) {
+                mapInstance.fitBounds(bounds, { padding: [20, 20] });
+              }
+            }, 100);
+          }
+        }
+        if (tab === "epoque" && constD && constD.length >= 2) {
+          destroyChart("chart-const-dist"); destroyChart("chart-const-prices");
+          charts["chart-const-dist"] = new Chart(D("chart-const-dist").getContext("2d"), {
+            type: "doughnut",
+            data: { 
+              labels: constD.map(c => c.époque), 
+              datasets: [{ 
+                data: constD.map(c => c.nb_transactions), 
+                backgroundColor: constD.map((_, i) => `rgba(180,83,9,${1 - i * 0.15})`) 
+              }] 
+            },
+            options: { plugins: { legend: { position: "right" } }, responsive: true, maintainAspectRatio: false }
+          });
+          charts["chart-const-prices"] = new Chart(D("chart-const-prices").getContext("2d"), {
+            type: "bar",
+            data: { 
+              labels: constD.map(c => c.époque), 
+              datasets: [{ 
+                data: constD.map(c => c.prix_m2_median), 
+                backgroundColor: "#b45309", 
+                borderRadius: 4 
+              }] 
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+          });
         }
         if (tab === "bruit" && brD.length >= 2) {
           destroyChart("chart-bruit");

@@ -181,6 +181,14 @@
 
   <div class="map-layout" style="display:flex">
     <aside class="map-sidebar">
+      <!-- Moteur de recherche autocomplete -->
+      <div style="margin-bottom:.75rem">
+        <label style="font-weight:700;font-size:.95rem;margin-bottom:.4rem;display:block">Recherche rapide</label>
+        <div class="autocomplete-wrap">
+          <input id="f-search" type="text" placeholder="Centrer sur une commune…" autocomplete="off" style="width:100%">
+        </div>
+      </div>
+
       <div>
         <div style="font-weight:700;font-size:.95rem;margin-bottom:.75rem">Filtres</div>
         <div class="form-group" style="margin-bottom:.6rem">
@@ -197,6 +205,8 @@
             <option value="revenu">👥 Revenu médian (€/an)</option>
             <option value="chomage">👔 Taux de chômage (%)</option>
             <option value="dpe">⚡ Qualité énergétique DPE</option>
+            <option value="ges">🌿 Classe GES (Carbone)</option>
+            <option value="annee">🏛️ Époque de construction (Année)</option>
             <option value="bruit">🔇 Niveau de Bruit (PEB %)</option>
           </select>
         </div>
@@ -293,6 +303,20 @@
         if (val <= 4.5) return "#f7d11e";
         if (val <= 5.5) return "#ef8023";
         return "#e3001b";
+      } else if (metric === "ges") {
+        if (val <= 2.5) return "#00843d";
+        if (val <= 3.5) return "#a4c437";
+        if (val <= 4.5) return "#f7d11e";
+        if (val <= 5.5) return "#ef8023";
+        return "#e3001b";
+      } else if (metric === "annee") {
+        if (val === 0) return "#e2e8f0";
+        if (val < 1949) return "#78350f";
+        if (val < 1975) return "#b45309";
+        if (val < 1990) return "#d97706";
+        if (val < 2001) return "#f59e0b";
+        if (val < 2013) return "#fbbf24";
+        return "#16a34a";
       } else if (metric === "bruit") {
         if (val === 0) return "#22c55e";
         if (val < 2.0) return "#fbbf24";
@@ -355,6 +379,25 @@
           <div class="legend-item"><div class="legend-swatch" style="background:#f7d11e"></div>D (Moyen)</div>
           <div class="legend-item"><div class="legend-swatch" style="background:#ef8023"></div>E (Énergivore)</div>
           <div class="legend-item"><div class="legend-swatch" style="background:#e3001b"></div>F - G (Passoire)</div>
+        `;
+      } else if (metric === "ges") {
+        html = `
+          <h4>Emissions GES moyenne</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#00843d"></div>A - B (Trés sobre)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#a4c437"></div>C (Sobre)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#f7d11e"></div>D (Moyen)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#ef8023"></div>E (Peu sobre)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#e3001b"></div>F - G (Passoire carbone)</div>
+        `;
+      } else if (metric === "annee") {
+        html = `
+          <h4>Époque de construction moyenne</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#78350f"></div>Avant 1949</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#b45309"></div>1949 – 1974</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#d97706"></div>1975 – 1989</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#f59e0b"></div>1990 – 2000</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fbbf24"></div>2001 – 2012</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#16a34a"></div>Après 2012</div>
         `;
       } else if (metric === "bruit") {
         html = `
@@ -443,8 +486,14 @@
         metricHtml = `<div class="popup-price" style="color:#ef8023;">${p.taux_chomage != null ? fmtP(p.taux_chomage) : "Non disponible"}</div>`;
       } else if (metric === "dpe") {
         const classes = ["?", "A", "B", "C", "D", "E", "F", "G"];
-        const dpeStr = p.avg_dpe ? 'Moy. Classe ' + classes[Math.round(p.avg_dpe)] + ' (' + p.avg_dpe + ')' : 'Non disponible';
+        const dpeStr = p.avg_dpe ? 'Moy. DPE ' + classes[Math.round(p.avg_dpe)] + ' (' + p.avg_dpe + ')' : 'Non disponible';
         metricHtml = `<div class="popup-price" style="color:#16a34a; font-size:1.1rem;">${dpeStr}</div>`;
+      } else if (metric === "ges") {
+        const classes = ["?", "A", "B", "C", "D", "E", "F", "G"];
+        const gesStr = p.avg_ges ? 'Moy. GES ' + classes[Math.round(p.avg_ges)] + ' (' + p.avg_ges.toFixed(1) + ')' : 'Non disponible';
+        metricHtml = `<div class="popup-price" style="color:#00843d; font-size:1.1rem;">${gesStr}</div>`;
+      } else if (metric === "annee") {
+        metricHtml = `<div class="popup-price" style="color:#b45309; font-size:1.1rem;">${p.avg_annee ? 'Bâtiment moy. ' + p.avg_annee : 'Non disponible'}</div>`;
       } else if (metric === "bruit") {
         metricHtml = `<div class="popup-price" style="color:#dc2626; font-size:1.1rem;">${p.pct_bruit != null ? p.pct_bruit.toFixed(1) + '% biens en PEB' : 'Non disponible'}</div>`;
       }
@@ -570,6 +619,68 @@
       } catch (e) {
         console.error(e);
       }
+    }
+
+    function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
+
+    const inpSearch = document.getElementById("f-search");
+    inpSearch.addEventListener("input", debounce(async () => {
+      const q = inpSearch.value.trim();
+      if (q.length < 2) { closeAC(); return }
+      try {
+        const res = await fetch(`/api/communes/search?q=${encodeURIComponent(q)}`).then(r => r.json());
+        renderAC(res);
+      } catch(e) {
+        console.error(e);
+      }
+    }));
+    document.addEventListener("click", e => { if (e.target !== inpSearch) closeAC() });
+
+    function renderAC(items) {
+      closeAC(); if (!items.length) return;
+      const ul = document.createElement("ul"); ul.className = "autocomplete-list";
+      items.forEach(it => {
+        const li = document.createElement("li");
+        li.innerHTML = `${it.nom_commune} <span>(${it.commune_code})</span>`;
+        li.addEventListener("click", () => {
+          inpSearch.value = it.nom_commune;
+          closeAC();
+          zoomToCommune(it.commune_code, it.departement_code);
+        });
+        ul.appendChild(li);
+      });
+      inpSearch.parentElement.appendChild(ul);
+    }
+    function closeAC() { inpSearch.parentElement.querySelector(".autocomplete-list")?.remove() }
+
+    async function zoomToCommune(code, dept) {
+      const currentDept = document.getElementById("f-dept").value.trim();
+      if (dept && dept !== currentDept) {
+        document.getElementById("f-dept").value = dept;
+        localStorage.setItem("filter_dept", dept);
+        await chargerCarte();
+      }
+      
+      if (!geojsonLayer) return;
+      
+      let targetLayer = null;
+      geojsonLayer.eachLayer(layer => {
+        if (layer.feature && layer.feature.properties && layer.feature.properties.commune_code === code) {
+          targetLayer = layer;
+        }
+      });
+      
+      if (targetLayer) {
+        const p = targetLayer.feature.properties;
+        const lat = parseFloat(p.lat);
+        const lng = parseFloat(p.lng);
+        if (lat && lng) {
+          map.setView([lat, lng], 12);
+          targetLayer.fire("click");
+        }
+      }
+    }
+
     // ── Restauration des informations depuis localStorage ─────────
     window.addEventListener("DOMContentLoaded", () => {
       const savedType = localStorage.getItem("property_type");

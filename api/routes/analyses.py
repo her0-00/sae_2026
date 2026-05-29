@@ -177,3 +177,72 @@ def liste_pois():
     )
     return jsonify([dict(r) for r in rows])
 
+
+@bp.get("/ges")
+@cache.cached(timeout=600, query_string=True)
+def analyse_ges():
+    commune_code = request.args.get("commune_code")
+    type_local = request.args.get("type", "Appartement")
+    if not commune_code:
+        abort(422)
+
+    rows = query(
+        """
+        SELECT
+            d.classe_ges,
+            COUNT(DISTINCT t.id) as nb_transactions,
+            ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) as prix_m2_median
+        FROM transactions t
+        JOIN dpe d
+          ON t.commune_code = d.commune_code
+         AND t.adresse_normalisee = d.adresse_normalisee
+        WHERE t.commune_code = %s
+          AND t.type_local = %s
+          AND t.est_valide = TRUE
+          AND t.prix_m2 IS NOT NULL
+        GROUP BY d.classe_ges
+        ORDER BY d.classe_ges
+        """,
+        (commune_code, type_local),
+    )
+    return jsonify([dict(r) for r in rows])
+
+
+@bp.get("/construction")
+@cache.cached(timeout=600, query_string=True)
+def analyse_construction():
+    commune_code = request.args.get("commune_code")
+    type_local = request.args.get("type", "Appartement")
+    if not commune_code:
+        abort(422)
+
+    rows = query(
+        """
+        SELECT
+            CASE
+                WHEN d.annee_construction < 1949 THEN 'Avant 1949'
+                WHEN d.annee_construction <= 1974 THEN '1949-1974'
+                WHEN d.annee_construction <= 1989 THEN '1975-1989'
+                WHEN d.annee_construction <= 2000 THEN '1990-2000'
+                WHEN d.annee_construction <= 2012 THEN '2001-2012'
+                ELSE 'Après 2012'
+            END as époque,
+            COUNT(DISTINCT t.id) as nb_transactions,
+            ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) as prix_m2_median
+        FROM transactions t
+        JOIN dpe d
+          ON t.commune_code = d.commune_code
+         AND t.adresse_normalisee = d.adresse_normalisee
+        WHERE t.commune_code = %s
+          AND t.type_local = %s
+          AND t.est_valide = TRUE
+          AND t.prix_m2 IS NOT NULL
+          AND d.annee_construction IS NOT NULL
+        GROUP BY époque
+        ORDER BY MIN(d.annee_construction)
+        """,
+        (commune_code, type_local),
+    )
+    return jsonify([dict(r) for r in rows])
+
+

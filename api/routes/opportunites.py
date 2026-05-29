@@ -21,12 +21,17 @@ def trouver_opportunites():
     dist_ecole_max = request.args.get("dist_ecole_max", type=float)
     chomage_max = request.args.get("chomage_max", type=float)
     bruit_max = request.args.get("bruit_max", type=float)
+    ges_max = request.args.get("ges_max")
+    epoque = request.args.get("epoque")
 
     if not departement:
         abort(422)
 
     # Normalise dpe_min pour la comparaison alphabétique SQL (ex: 'D')
     dpe_min_val = dpe_min.strip().upper() if dpe_min else 'G'
+
+    GES_VALS = {'A': 1.0, 'B': 2.0, 'C': 3.0, 'D': 4.0, 'E': 5.0, 'F': 6.0, 'G': 7.0}
+    ges_max_val = GES_VALS.get(ges_max.strip().upper()) if ges_max else None
 
     sql = """
         WITH stats_commune AS (
@@ -55,6 +60,8 @@ def trouver_opportunites():
                 sc.pct_bruit,
                 sc.pct_dpe_ok,
                 sc.pct_dpe_good,
+                dgs.avg_ges,
+                dgs.avg_annee,
                 
                 -- score_prix (bas = 100, élevé = 0)
                 100 - LEAST(100, GREATEST(0, ROUND(
@@ -85,6 +92,25 @@ def trouver_opportunites():
             FROM prix_m2_par_commune p
             JOIN communes_stats c ON c.commune_code = p.commune_code
             LEFT JOIN stats_commune sc ON sc.commune_code = p.commune_code
+            LEFT JOIN (
+                SELECT 
+                    commune_code,
+                    ROUND(AVG(
+                        CASE classe_ges
+                            WHEN 'A' THEN 1.0
+                            WHEN 'B' THEN 2.0
+                            WHEN 'C' THEN 3.0
+                            WHEN 'D' THEN 4.0
+                            WHEN 'E' THEN 5.0
+                            WHEN 'F' THEN 6.0
+                            WHEN 'G' THEN 7.0
+                        END
+                    )::numeric, 1) as avg_ges,
+                    ROUND(AVG(annee_construction))::integer as avg_annee
+                FROM dpe
+                WHERE (classe_ges IS NOT NULL OR annee_construction IS NOT NULL)
+                GROUP BY commune_code
+            ) dgs ON dgs.commune_code = p.commune_code
             WHERE p.type_local       = %s
               AND c.departement_code = %s
               AND p.annee = (SELECT MAX(annee) FROM prix_m2_par_commune)
@@ -102,6 +128,8 @@ def trouver_opportunites():
             avg_dist_ecole,
             pct_bruit,
             pct_dpe_ok,
+            avg_ges,
+            avg_annee,
             score_prix,
             score_revenu,
             score_chomage,
@@ -144,6 +172,22 @@ def trouver_opportunites():
     if bruit_max:
         where_clauses.append("pct_bruit <= %s")
         params.append(bruit_max)
+    if ges_max_val:
+        where_clauses.append("avg_ges <= %s")
+        params.append(ges_max_val)
+    if epoque:
+        if epoque == "avant_1949":
+            where_clauses.append("avg_annee < 1949")
+        elif epoque == "1949_1974":
+            where_clauses.append("avg_annee >= 1949 AND avg_annee <= 1974")
+        elif epoque == "1975_1989":
+            where_clauses.append("avg_annee >= 1975 AND avg_annee <= 1989")
+        elif epoque == "1990_2000":
+            where_clauses.append("avg_annee >= 1990 AND avg_annee <= 2000")
+        elif epoque == "2001_2012":
+            where_clauses.append("avg_annee >= 2001 AND avg_annee <= 2012")
+        elif epoque == "apres_2012":
+            where_clauses.append("avg_annee >= 2013")
 
     if where_clauses:
         sql += " WHERE " + " AND ".join(where_clauses)
@@ -151,4 +195,19 @@ def trouver_opportunites():
     sql += " ORDER BY score_total DESC LIMIT 15"
 
     rows = query(sql, params)
-    return jsonify([dict(r) for r in rows])
+    
+    # Convert Decimals/Floats/Ints correctly for JSON
+    res_list = []
+    for r in rows:
+        d = dict(r)
+        if d.get("avg_ges") is not None:
+            d["avg_ges"] = float(d["avg_ges"])
+        if d.get("avg_annee") is not None:
+            d["avg_annee"] = int(d["avg_annee"])
+        if d.get("revenu_median") is not None:
+            d["revenu_median"] = float(d["revenu_median"])
+        if d.get("taux_chomage") is not None:
+            d["taux_chomage"] = float(d["taux_chomage"])
+        res_list.append(d)
+
+    return jsonify(res_list)

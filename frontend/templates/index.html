@@ -71,6 +71,31 @@
           </select>
         </div>
         <div class="form-group">
+          <label>Classe GES connue</label>
+          <select id="inp-ges">
+            <option value="">Inconnue</option>
+            <option value="A">A — Très sobre</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="G">G — Très émetteur</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Époque de construction</label>
+          <select id="inp-epoque">
+            <option value="">Inconnue</option>
+            <option value="Avant 1949">Avant 1949</option>
+            <option value="1949-1974">1949-1974</option>
+            <option value="1975-1989">1975-1989</option>
+            <option value="1990-2000">1990-2000</option>
+            <option value="2001-2012">2001-2012</option>
+            <option value="Après 2012">Après 2012</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Prix demandé (€) <span class="text-muted text-sm">optionnel</span></label>
           <input id="inp-prix" type="number" min="0" placeholder="280 000">
         </div>
@@ -161,6 +186,12 @@
       
       const savedDpe = localStorage.getItem("property_dpe");
       if (savedDpe) D("inp-dpe").value = savedDpe;
+
+      const savedGes = localStorage.getItem("property_ges");
+      if (savedGes) D("inp-ges").value = savedGes;
+
+      const savedEpoque = localStorage.getItem("property_epoque");
+      if (savedEpoque) D("inp-epoque").value = savedEpoque;
       
       const savedPrix = localStorage.getItem("property_prix");
       if (savedPrix) D("inp-prix").value = savedPrix;
@@ -175,6 +206,8 @@
     D("inp-surface").addEventListener("input", e => localStorage.setItem("property_surface", e.target.value));
     D("inp-pieces").addEventListener("input", e => localStorage.setItem("property_pieces", e.target.value));
     D("inp-dpe").addEventListener("change", e => localStorage.setItem("property_dpe", e.target.value));
+    D("inp-ges").addEventListener("change", e => localStorage.setItem("property_ges", e.target.value));
+    D("inp-epoque").addEventListener("change", e => localStorage.setItem("property_epoque", e.target.value));
     D("inp-prix").addEventListener("input", e => localStorage.setItem("property_prix", e.target.value));
 
     // ── Soumission du formulaire ─────────────────────────────────
@@ -188,6 +221,13 @@
       D("result").innerHTML = `<div class="spinner"></div><p class="loading-text">Analyse en cours…</p>`;
 
       const body = { commune_code: code, surface, type_local: D("inp-type").value };
+      
+      const gesClasse = D("inp-ges").value;
+      if (gesClasse) body.ges_classe = gesClasse;
+      
+      const epoque = D("inp-epoque").value;
+      if (epoque) body.epoque = epoque;
+
       const prixDemande = parseFloat(D("inp-prix").value) || null;
       if (prixDemande) body.prix_demande = prixDemande;
 
@@ -234,6 +274,8 @@
     function renderResult(data, body, dpeClasse, prixDemande) {
       const { est, resume, dpe, transport, tendances, txList } = data;
       const score = est.score_deal;
+      const gesClasse = body.ges_classe || "";
+      const epoque = body.epoque || "";
       const pctile = prixDemande ? Math.round((prixDemande / body.surface - est.prix_m2_q25) / (est.prix_m2_q75 - est.prix_m2_q25) * 50 + 25) : null;
       const markerPct = pctile ? Math.max(2, Math.min(98, pctile)) : Math.round((est.prix_m2_median - est.prix_m2_q25) / (est.prix_m2_q75 - est.prix_m2_q25) * 50 + 25);
 
@@ -351,6 +393,24 @@
           </div>
         </div>` : ""}
 
+        <!-- Facture d'énergie estimée -->
+        ${est.facture_energie_est ? `
+        <div class="alert alert-info mt-2" style="background: rgba(37, 99, 235, 0.05); border-left: 4px solid var(--primary); padding: 1rem; border-radius: var(--r); margin-top: 1.25rem; margin-bottom: 0.5rem;">
+          <h4 style="color:var(--primary); font-weight:700; margin:0 0 0.4rem 0; font-size: 0.88rem; display:flex; align-items:center; gap:0.4rem;">
+            🔌 Facture d'Énergie Estimée (Chauffage)
+          </h4>
+          <p style="font-size:0.78rem; margin:0; line-height:1.4; color: var(--text);">
+            Consommation moyenne observée dans la commune : <strong>${est.avg_conso} kWh/m²/an</strong>.
+          </p>
+          <div style="margin-top:0.75rem; border-top:1px solid rgba(37, 99, 235, 0.2); padding-top:0.6rem; display:flex; justify-content:space-between; align-items:center; font-size:0.78rem;">
+            <span>Coût annuel estimé pour ${body.surface} m² :</span>
+            <strong style="color:var(--primary); font-weight:800; font-size:1rem;">${fmt(est.facture_energie_est)} / an</strong>
+          </div>
+          <div style="font-size:0.68rem; color:var(--muted); margin-top:0.25rem; font-style:italic; text-align:right;">
+            * Basé sur un tarif moyen de 0.25 €/kWh
+          </div>
+        </div>` : ""}
+
         <!-- Stats clés commune -->
         <div class="kpi-strip mt-2" style="grid-template-columns:repeat(3,1fr)">
           <div class="kpi" style="cursor:help;" title="Prix au m² médian calculé sur l'ensemble des transactions réelles dans cette commune.">
@@ -437,14 +497,33 @@
             </div>
           </div>
 
-          <!-- Énergie DPE -->
+          <!-- Énergie DPE & GES -->
           <div class="dim-card" style="--dim-color:#16a34a">
             <div class="dim-icon">⚡</div>
-            <div class="dim-label">Énergie (DPE)</div>
-            <div class="dim-value">${dpeClasse ? `Classe ${dpeClasse} déclarée` : dpe.length ? `${dpe.length} classes analysées` : "Données insuffisantes"}</div>
-            <div class="dim-detail">${dpeInsight || (dpe.length ? "Impact énergie disponible — voir fiche commune" : "DPE non disponible pour cette commune")}</div>
+            <div class="dim-label">Énergie (DPE) & Climat (GES)</div>
+            <div class="dim-value">
+              ${dpeClasse ? `DPE: Classe ${dpeClasse}` : "DPE inconnu"} 
+              ${gesClasse ? `· GES: Classe ${gesClasse}` : ""}
+            </div>
+            <div class="dim-detail">
+              ${gesClasse && est.ges_prix_m2 ? `Impact GES : <strong>${fmt(est.ges_prix_m2)}/m²</strong> (${((est.ges_prix_m2 - est.prix_m2_median) / est.prix_m2_median * 100).toFixed(1)}% vs médiane) · ` : ""}
+              ${dpeInsight || (dpe.length ? "Impact énergie disponible — voir fiche commune" : "DPE non disponible")}
+            </div>
             <div class="dim-score ${dpeClasse ? (['A', 'B', 'C'].includes(dpeClasse) ? 'good' : ['D', 'E'].includes(dpeClasse) ? 'ok' : 'bad') : 'na'}">
               ${dpeClasse || "?"}
+            </div>
+          </div>
+
+          <!-- Époque de construction -->
+          <div class="dim-card" style="--dim-color:#b45309">
+            <div class="dim-icon">🏛️</div>
+            <div class="dim-label">Époque de construction</div>
+            <div class="dim-value">${epoque ? `Époque ${epoque}` : "Époque non renseignée"}</div>
+            <div class="dim-detail">
+              ${est.epoque_prix_m2 ? `Prix moyen époque : <strong>${fmt(est.epoque_prix_m2)}/m²</strong> (${((est.epoque_prix_m2 - est.prix_m2_median) / est.prix_m2_median * 100).toFixed(1)}% vs médiane commune)` : "Sélectionnez une époque pour analyser son impact sur le prix"}
+            </div>
+            <div class="dim-score ${epoque ? 'ok' : 'na'}">
+              ${epoque ? '🏛️' : '?'}
             </div>
           </div>
 
