@@ -45,6 +45,10 @@ def create_app():
     def page_opportunites():
         return render_template("opportunites.html")
 
+    @app.route("/architecture")
+    def page_architecture():
+        return render_template("architecture.html")
+
     @app.route("/health")
     def health():
         return jsonify({"status": "ok"})

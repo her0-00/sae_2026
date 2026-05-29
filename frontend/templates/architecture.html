@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Architecture — ImmoBI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    :root {
+      --c-source:  #0f766e; --c-source-bg:  #f0fdfa; --c-source-b:  #99f6e4;
+      --c-dagster: #7c3aed; --c-dagster-bg: #f5f3ff; --c-dagster-b: #c4b5fd;
+      --c-db:      #1d4ed8; --c-db-bg:      #eff6ff; --c-db-b:      #93c5fd;
+      --c-api:     #c2410c; --c-api-bg:     #fff7ed; --c-api-b:     #fed7aa;
+      --c-front:   #1e40af; --c-front-bg:   #eff6ff; --c-front-b:   #bfdbfe;
+      --c-deploy:  #374151; --c-deploy-bg:  #f9fafb; --c-deploy-b:  #d1d5db;
+    }
+
+    body { background:#f8fafc }
+
+    /* ── Hero ── */
+    .arch-hero {
+      background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 40%,#1e3a8a 75%,#0c4a6e 100%);
+      color:#fff; padding:3rem 2rem 2.5rem; text-align:center; position:relative; overflow:hidden;
+    }
+    .arch-hero::before {
+      content:''; position:absolute; inset:0;
+      background:radial-gradient(ellipse at 30% 50%,rgba(99,102,241,.18),transparent 60%),
+                 radial-gradient(ellipse at 70% 30%,rgba(14,165,233,.12),transparent 55%);
+    }
+    .arch-hero-inner { position:relative; z-index:1; max-width:900px; margin:0 auto }
+    .arch-hero h1 { font-size:2.4rem; font-weight:900; letter-spacing:-.03em; margin-bottom:.5rem }
+    .arch-hero h1 span { color:#60a5fa }
+    .arch-hero p { opacity:.75; font-size:1.05rem; margin-bottom:1.5rem }
+    .tech-badges { display:flex; flex-wrap:wrap; justify-content:center; gap:.5rem }
+    .tech-badge {
+      background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+      color:rgba(255,255,255,.9); padding:.3rem .75rem; border-radius:999px;
+      font-size:.78rem; font-weight:600; font-family:'JetBrains Mono',monospace;
+    }
+
+    /* ── Layout ── */
+    .arch-wrap { max-width:1100px; margin:0 auto; padding:2.5rem 1.5rem 4rem }
+
+    /* ── Stats row ── */
+    .stats-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:1rem; margin-bottom:2.5rem }
+    .stat-card {
+      background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+      padding:1.1rem 1rem; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.05);
+    }
+    .stat-card .n { font-size:2rem; font-weight:900; line-height:1; color:var(--primary); letter-spacing:-.02em }
+    .stat-card .l { font-size:.75rem; color:#64748b; margin-top:.3rem; font-weight:500 }
+
+    /* ── Layer ── */
+    .layer { margin-bottom:.5rem }
+    .layer-header {
+      display:flex; align-items:center; gap:.75rem;
+      padding:.8rem 1.25rem; border-radius:12px 12px 0 0;
+      border:1.5px solid; border-bottom:none; font-weight:700;
+    }
+    .layer-icon { font-size:1.3rem }
+    .layer-title { font-size:1rem; font-weight:800; letter-spacing:-.01em }
+    .layer-subtitle { font-size:.8rem; font-weight:400; opacity:.75; margin-left:auto }
+    .layer-body {
+      border:1.5px solid; border-top:none; border-radius:0 0 12px 12px;
+      padding:1.25rem; margin-bottom:0;
+    }
+
+    /* Layer colors */
+    .layer-source .layer-header  { background:var(--c-source-bg);  border-color:var(--c-source-b);  color:var(--c-source) }
+    .layer-source .layer-body    { background:var(--c-source-bg);  border-color:var(--c-source-b) }
+    .layer-dagster .layer-header { background:var(--c-dagster-bg); border-color:var(--c-dagster-b); color:var(--c-dagster) }
+    .layer-dagster .layer-body   { background:var(--c-dagster-bg); border-color:var(--c-dagster-b) }
+    .layer-db .layer-header      { background:var(--c-db-bg);      border-color:var(--c-db-b);      color:var(--c-db) }
+    .layer-db .layer-body        { background:var(--c-db-bg);      border-color:var(--c-db-b) }
+    .layer-api .layer-header     { background:var(--c-api-bg);     border-color:var(--c-api-b);     color:var(--c-api) }
+    .layer-api .layer-body       { background:var(--c-api-bg);     border-color:var(--c-api-b) }
+    .layer-front .layer-header   { background:var(--c-front-bg);   border-color:var(--c-front-b);   color:var(--c-front) }
+    .layer-front .layer-body     { background:var(--c-front-bg);   border-color:var(--c-front-b) }
+    .layer-deploy .layer-header  { background:var(--c-deploy-bg);  border-color:var(--c-deploy-b);  color:var(--c-deploy) }
+    .layer-deploy .layer-body    { background:var(--c-deploy-bg);  border-color:var(--c-deploy-b) }
+
+    /* ── Chips ── */
+    .chips { display:flex; flex-wrap:wrap; gap:.5rem }
+    .chip {
+      display:inline-flex; align-items:center; gap:.4rem;
+      padding:.38rem .85rem; border-radius:8px; font-size:.82rem; font-weight:600;
+      border:1.5px solid; transition:transform .15s, box-shadow .15s; cursor:default;
+    }
+    .chip:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.1) }
+    .chip-em  { font-family:'JetBrains Mono',monospace; font-size:.78rem }
+    .chip-desc { font-size:.72rem; font-weight:400; opacity:.75; margin-left:.1rem }
+
+    .chip-source  { background:#fff; border-color:var(--c-source-b);  color:var(--c-source) }
+    .chip-dagster { background:#fff; border-color:var(--c-dagster-b); color:var(--c-dagster) }
+    .chip-db      { background:#fff; border-color:var(--c-db-b);      color:var(--c-db) }
+    .chip-view    { background:#dbeafe; border-color:#93c5fd; color:#1e40af }
+    .chip-api     { background:#fff; border-color:var(--c-api-b);     color:var(--c-api) }
+    .chip-front   { background:#fff; border-color:var(--c-front-b);   color:var(--c-front) }
+    .chip-deploy  { background:#fff; border-color:var(--c-deploy-b);  color:var(--c-deploy) }
+
+    /* ── Arrow between layers ── */
+    .arch-arrow {
+      display:flex; align-items:center; justify-content:center;
+      height:40px; position:relative;
+    }
+    .arch-arrow::before {
+      content:''; position:absolute; left:50%; top:0; bottom:0;
+      width:2px; background:linear-gradient(to bottom,#cbd5e1,#94a3b8); transform:translateX(-50%);
+    }
+    .arch-arrow-head {
+      width:32px; height:32px; background:#fff; border:2px solid #94a3b8;
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:1rem; color:#64748b; z-index:1; position:relative;
+    }
+
+    /* ── Dagster pipeline ── */
+    .pipeline {
+      display:flex; align-items:center; gap:0; flex-wrap:wrap;
+      background:#fff; border:1.5px solid var(--c-dagster-b);
+      border-radius:10px; padding:.75rem 1rem; margin-top:.75rem;
+    }
+    .pipeline-step {
+      display:flex; align-items:center; gap:.4rem;
+      padding:.4rem .75rem; border-radius:7px; font-size:.8rem; font-weight:700;
+      background:var(--c-dagster-bg); border:1.5px solid var(--c-dagster-b); color:var(--c-dagster);
+      white-space:nowrap; flex-shrink:0;
+    }
+    .pipeline-step .step-n {
+      width:20px; height:20px; border-radius:50%; background:var(--c-dagster);
+      color:#fff; display:flex; align-items:center; justify-content:center;
+      font-size:.68rem; font-weight:800; flex-shrink:0;
+    }
+    .pipeline-step.parallel { background:#f5f0ff; border-color:#c4b5fd }
+    .pipeline-arrow { color:#a78bfa; font-size:1.1rem; padding:0 .3rem; flex-shrink:0 }
+    .pipeline-branch {
+      display:flex; flex-direction:column; gap:.4rem; align-items:flex-start;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size:.72rem; font-weight:700; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.07em; margin-bottom:.6rem;
+      display:flex; align-items:center; gap:.4rem;
+    }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--border) }
+
+    /* ── Jointure section ── */
+    .join-card {
+      background:#fff; border:1.5px solid #e2e8f0; border-radius:10px;
+      padding:1rem 1.25rem; margin-top:.75rem;
+    }
+    .join-row {
+      display:flex; align-items:flex-start; gap:1rem; padding:.5rem 0;
+      border-bottom:1px solid #f1f5f9; font-size:.83rem;
+    }
+    .join-row:last-child { border-bottom:none }
+    .join-badge {
+      padding:.2rem .6rem; border-radius:5px; font-size:.72rem; font-weight:700;
+      white-space:nowrap; flex-shrink:0; font-family:'JetBrains Mono',monospace;
+    }
+    .join-p1 { background:#dbeafe; color:#1e40af }
+    .join-p2 { background:#ede9fe; color:#6d28d9 }
+
+    /* ── DB tables ── */
+    .db-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:.75rem; margin-top:.75rem }
+    .db-table {
+      background:#fff; border:1.5px solid var(--c-db-b); border-radius:10px; padding:.85rem 1rem;
+      transition:box-shadow .15s, transform .15s;
+    }
+    .db-table:hover { box-shadow:0 4px 14px rgba(29,78,216,.12); transform:translateY(-2px) }
+    .db-table-name { font-family:'JetBrains Mono',monospace; font-size:.82rem; font-weight:600; color:var(--c-db); margin-bottom:.3rem }
+    .db-table-desc { font-size:.75rem; color:#64748b }
+    .db-table.view  { border-color:#93c5fd; background:#eff6ff }
+    .db-table.view .db-table-name { color:#1d4ed8 }
+    .db-badge { font-size:.65rem; font-weight:700; padding:.1rem .4rem; border-radius:4px; margin-left:.3rem; vertical-align:middle }
+    .db-badge-view { background:#bfdbfe; color:#1e40af }
+    .db-badge-pk   { background:#d1fae5; color:#065f46 }
+    .db-badge-geo  { background:#ede9fe; color:#6d28d9 }
+
+    /* ── API routes ── */
+    .api-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.65rem; margin-top:.75rem }
+    .api-route {
+      background:#fff; border:1.5px solid var(--c-api-b); border-radius:9px;
+      padding:.75rem 1rem; display:flex; align-items:flex-start; gap:.7rem;
+      transition:box-shadow .15s, transform .15s;
+    }
+    .api-route:hover { box-shadow:0 4px 12px rgba(194,65,12,.1); transform:translateY(-1px) }
+    .api-method {
+      font-size:.68rem; font-weight:800; padding:.15rem .45rem; border-radius:4px;
+      flex-shrink:0; margin-top:.1rem; font-family:'JetBrains Mono',monospace;
+    }
+    .get  { background:#dcfce7; color:#166534 }
+    .post { background:#fef3c7; color:#92400e }
+    .api-path { font-family:'JetBrains Mono',monospace; font-size:.78rem; font-weight:600; color:var(--c-api) }
+    .api-desc { font-size:.73rem; color:#64748b; margin-top:.1rem }
+
+    /* ── Frontend pages ── */
+    .front-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:.75rem; margin-top:.75rem }
+    .front-page {
+      background:#fff; border:1.5px solid var(--c-front-b); border-radius:10px;
+      padding:.9rem 1rem; text-align:center;
+      transition:box-shadow .15s, transform .15s;
+    }
+    .front-page:hover { box-shadow:0 4px 12px rgba(30,64,175,.1); transform:translateY(-2px) }
+    .front-page-icon { font-size:1.8rem; margin-bottom:.4rem }
+    .front-page-name { font-size:.88rem; font-weight:700; color:var(--c-front); margin-bottom:.2rem }
+    .front-page-url { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:#64748b }
+    .front-page-libs { display:flex; flex-wrap:wrap; justify-content:center; gap:.3rem; margin-top:.5rem }
+    .lib-tag { font-size:.68rem; background:#f1f5f9; border:1px solid #e2e8f0; color:#475569; padding:.1rem .4rem; border-radius:4px; font-weight:500 }
+
+    /* ── Deploy ── */
+    .deploy-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.75rem; margin-top:.75rem }
+    .deploy-card {
+      background:#fff; border:1.5px solid var(--c-deploy-b); border-radius:10px;
+      padding:.9rem 1rem; text-align:center;
+      transition:box-shadow .15s;
+    }
+    .deploy-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.08) }
+    .deploy-card-icon { font-size:1.6rem; margin-bottom:.4rem }
+    .deploy-card-name { font-size:.88rem; font-weight:700; color:var(--c-deploy) }
+    .deploy-card-desc { font-size:.75rem; color:#64748b; margin-top:.2rem }
+
+    @media(max-width:768px) {
+      .arch-hero h1 { font-size:1.6rem }
+      .pipeline { flex-direction:column; align-items:flex-start }
+      .pipeline-arrow { transform:rotate(90deg) }
+      .stats-row { grid-template-columns:repeat(3,1fr) }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
+    <ul class="nav-links">
+      <li><a href="/">Analyser</a></li>
+      <li><a href="/carte">Carte des prix</a></li>
+      <li><a href="/commune">Fiche commune</a></li>
+      <li><a href="/opportunites">Opportunités</a></li>
+      <li><a href="/architecture" class="active">Architecture</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="arch-hero">
+  <div class="arch-hero-inner">
+    <h1>Architecture <span>ImmoBI</span></h1>
+    <p>Pipeline de données · API REST · Interface web — Vue d'ensemble technique</p>
+    <div class="tech-badges">
+      <span class="tech-badge">Python 3.13</span>
+      <span class="tech-badge">Flask</span>
+      <span class="tech-badge">PostgreSQL + PostGIS</span>
+      <span class="tech-badge">Dagster</span>
+      <span class="tech-badge">Leaflet.js</span>
+      <span class="tech-badge">Chart.js</span>
+      <span class="tech-badge">Render.com</span>
+      <span class="tech-badge">GitHub</span>
+    </div>
+  </div>
+</div>
+
+<div class="arch-wrap">
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="n">6</div><div class="l">Sources de données</div></div>
+    <div class="stat-card"><div class="n">5</div><div class="l">Étapes Dagster</div></div>
+    <div class="stat-card"><div class="n">6</div><div class="l">Tables PostgreSQL</div></div>
+    <div class="stat-card"><div class="n">4</div><div class="l">Vues matérialisées</div></div>
+    <div class="stat-card"><div class="n">6</div><div class="l">Blueprints API</div></div>
+    <div class="stat-card"><div class="n">4</div><div class="l">Pages frontend</div></div>
+    <div class="stat-card"><div class="n">5</div><div class="l">Années de données</div></div>
+  </div>
+
+  <!-- ── LAYER 1 : Sources ── -->
+  <div class="layer layer-source">
+    <div class="layer-header">
+      <span class="layer-icon">🌐</span>
+      <div>
+        <div class="layer-title">Sources de données</div>
+      </div>
+      <span class="layer-subtitle">APIs publiques & fichiers open data</span>
+    </div>
+    <div class="layer-body">
+      <div class="chips">
+        <div class="chip chip-source">
+          <span>📊</span>
+          <div><div class="chip-em">DVF — data.gouv.fr</div><div class="chip-desc">Transactions immobilières notariales</div></div>
+        </div>
+        <div class="chip chip-source">
+          <span>⚡</span>
+          <div><div class="chip-em">ADEME API</div><div class="chip-desc">Diagnostics de performance énergétique (DPE)</div></div>
+        </div>
+        <div class="chip chip-source">
+          <span>🗺️</span>
+          <div><div class="chip-em">IGN / GeoAPI</div><div class="chip-desc">Contours géographiques des communes</div></div>
+        </div>
+        <div class="chip chip-source">
+          <span>👥</span>
+          <div><div class="chip-em">INSEE Filosofi</div><div class="chip-desc">Revenus médians & chômage par commune</div></div>
+        </div>
+        <div class="chip chip-source">
+          <span>🚂</span>
+          <div><div class="chip-em">OpenStreetMap (Overpass)</div><div class="chip-desc">Gares SNCF & établissements scolaires</div></div>
+        </div>
+        <div class="chip chip-source">
+          <span>🔇</span>
+          <div><div class="chip-em">DGAC — PEB</div><div class="chip-desc">Plans d'exposition au bruit aéroport</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
+
+  <!-- ── LAYER 2 : Dagster ── -->
+  <div class="layer layer-dagster">
+    <div class="layer-header">
+      <span class="layer-icon">⚙️</span>
+      <div>
+        <div class="layer-title">Orchestration — Dagster</div>
+      </div>
+      <span class="layer-subtitle">orchestration/assets.py · Partitions par département</span>
+    </div>
+    <div class="layer-body">
+
+      <div class="section-label">Pipeline d'ingestion (partitionné par département)</div>
+      <div class="pipeline">
+        <div class="pipeline-step"><div class="step-n">1</div>communes<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">IGN · INSEE</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-branch">
+          <div class="pipeline-step parallel"><div class="step-n">2</div>dvf<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">data.gouv.fr</div></div>
+          <div class="pipeline-step parallel"><div class="step-n">2</div>dpe<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">ADEME API</div></div>
+          <div class="pipeline-step parallel"><div class="step-n">2</div>poi<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">OSM Overpass</div></div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-branch">
+          <div class="pipeline-step"><div class="step-n">3</div>peb<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">National</div></div>
+          <div class="pipeline-step"><div class="step-n">3</div>filosofi<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">National</div></div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="step-n">4</div>enrichissement<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">Spatial joins</div></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><div class="step-n">5</div>quality<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">Checks</div></div>
+      </div>
+
+      <div class="join-card" style="margin-top:1rem">
+        <div class="section-label" style="margin-bottom:.5rem">Stratégie de jointure DPE ↔ DVF (load_enrichment.py)</div>
+        <div class="join-row">
+          <span class="join-badge join-p1">Passe 1</span>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">Jointure exacte sur adresse normalisée</div>
+            <div style="font-size:.77rem;color:#64748b;margin-top:.1rem"><code style="background:#f1f5f9;padding:.1rem .3rem;border-radius:4px;font-size:.75rem">commune_code = commune_code AND adresse_normalisee = adresse_normalisee</code> — Adresses en minuscules, sans accents, abréviations développées (r → rue, av → avenue…)</div>
+          </div>
+        </div>
+        <div class="join-row">
+          <span class="join-badge join-p2">Passe 2</span>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">Jointure spatiale GPS — rayon 30 m</div>
+            <div style="font-size:.77rem;color:#64748b;margin-top:.1rem"><code style="background:#f1f5f9;padding:.1rem .3rem;border-radius:4px;font-size:.75rem">ST_DWithin(t.geom, d.geom, 0.0003)</code> + <code style="background:#f1f5f9;padding:.1rem .3rem;border-radius:4px;font-size:.75rem">ORDER BY t.geom &lt;-&gt; d.geom</code> — Pour les transactions sans DPE après la Passe 1, on prend le DPE le plus proche géographiquement</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
+
+  <!-- ── LAYER 3 : BDD ── -->
+  <div class="layer layer-db">
+    <div class="layer-header">
+      <span class="layer-icon">🗄️</span>
+      <div>
+        <div class="layer-title">Base de données — PostgreSQL + PostGIS</div>
+      </div>
+      <span class="layer-subtitle">Hébergée sur Render · Extension spatiale PostGIS</span>
+    </div>
+    <div class="layer-body">
+
+      <div class="section-label">Tables</div>
+      <div class="db-grid">
+        <div class="db-table">
+          <div class="db-table-name">communes_stats <span class="db-badge db-badge-geo">GEO</span></div>
+          <div class="db-table-desc">Contours MultiPolygon + stats INSEE (revenu, chômage, population) par commune</div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">transactions <span class="db-badge db-badge-geo">GEO</span></div>
+          <div class="db-table-desc">Ventes DVF enrichies : prix, DPE, distances gare/école, zone PEB</div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">dpe <span class="db-badge db-badge-geo">GEO</span></div>
+          <div class="db-table-desc">Diagnostics ADEME avec coordonnées GPS et adresse normalisée</div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">peb_zones <span class="db-badge db-badge-geo">GEO</span></div>
+          <div class="db-table-desc">Polygones de bruit aéroport (zones A–D) par aéroport</div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">points_interet <span class="db-badge db-badge-geo">GEO</span></div>
+          <div class="db-table-desc">Gares SNCF et établissements scolaires (OSM)</div>
+        </div>
+        <div class="db-table">
+          <div class="db-table-name">quality_log</div>
+          <div class="db-table-desc">Traçabilité des contrôles qualité (taux géocodage, FK…)</div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:1.25rem">Vues matérialisées (rafraîchies après chaque ingestion)</div>
+      <div class="db-grid">
+        <div class="db-table view">
+          <div class="db-table-name">prix_m2_par_commune <span class="db-badge db-badge-view">VIEW</span></div>
+          <div class="db-table-desc">Prix médian, Q25, Q75 par commune / type / année</div>
+        </div>
+        <div class="db-table view">
+          <div class="db-table-name">stats_dpe <span class="db-badge db-badge-view">VIEW</span></div>
+          <div class="db-table-desc">Prix médian par classe DPE et commune</div>
+        </div>
+        <div class="db-table view">
+          <div class="db-table-name">stats_peb <span class="db-badge db-badge-view">VIEW</span></div>
+          <div class="db-table-desc">Prix médian selon zone PEB et aéroport</div>
+        </div>
+        <div class="db-table view">
+          <div class="db-table-name">stats_distance_gare <span class="db-badge db-badge-view">VIEW</span></div>
+          <div class="db-table-desc">Prix médian par tranche de distance à la gare</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
+
+  <!-- ── LAYER 4 : API ── -->
+  <div class="layer layer-api">
+    <div class="layer-header">
+      <span class="layer-icon">🔌</span>
+      <div>
+        <div class="layer-title">API Backend — Flask + Python</div>
+      </div>
+      <span class="layer-subtitle">api/ · 6 Blueprints · Flask-Caching · CORS</span>
+    </div>
+    <div class="layer-body">
+      <div class="api-grid">
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/communes/search</div><div class="api-desc">Recherche autocomplete de communes</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/communes/{code}/resume</div><div class="api-desc">Fiche synthétique d'une commune</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method post">POST</span>
+          <div><div class="api-path">/api/estimateur</div><div class="api-desc">Estimation prix + score deal + socio</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/carte/prix-m2</div><div class="api-desc">GeoJSON choroplèthe (prix, DPE, bruit…)</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/dpe</div><div class="api-desc">Distribution et prix par classe DPE</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/transport</div><div class="api-desc">Prix par tranche distance gare</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/bruit</div><div class="api-desc">Décote par zone PEB</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/tendances</div><div class="api-desc">Évolution trimestrielle des prix</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/pois</div><div class="api-desc">Gares & écoles dans une commune</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/opportunites</div><div class="api-desc">Score composite multi-critères</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/transactions</div><div class="api-desc">Transactions récentes comparables</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/carte/transactions</div><div class="api-desc">Transactions géolocalisées (carte)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
+
+  <!-- ── LAYER 5 : Frontend ── -->
+  <div class="layer layer-front">
+    <div class="layer-header">
+      <span class="layer-icon">🖥️</span>
+      <div>
+        <div class="layer-title">Frontend — HTML · CSS · JavaScript</div>
+      </div>
+      <span class="layer-subtitle">frontend/ · Vanilla JS · Chart.js · Leaflet.js</span>
+    </div>
+    <div class="layer-body">
+      <div class="front-grid">
+        <div class="front-page">
+          <div class="front-page-icon">🔍</div>
+          <div class="front-page-name">Analyseur de prix</div>
+          <div class="front-page-url">/</div>
+          <div class="front-page-libs">
+            <span class="lib-tag">Chart.js</span>
+            <span class="lib-tag">Autocomplete</span>
+            <span class="lib-tag">Percentile bar</span>
+          </div>
+        </div>
+        <div class="front-page">
+          <div class="front-page-icon">📋</div>
+          <div class="front-page-name">Fiche commune</div>
+          <div class="front-page-url">/commune</div>
+          <div class="front-page-libs">
+            <span class="lib-tag">Chart.js</span>
+            <span class="lib-tag">5 onglets</span>
+            <span class="lib-tag">KPI strip</span>
+          </div>
+        </div>
+        <div class="front-page">
+          <div class="front-page-icon">🗺️</div>
+          <div class="front-page-name">Carte des prix</div>
+          <div class="front-page-url">/carte</div>
+          <div class="front-page-libs">
+            <span class="lib-tag">Leaflet.js</span>
+            <span class="lib-tag">GeoJSON</span>
+            <span class="lib-tag">Choroplèthe</span>
+          </div>
+        </div>
+        <div class="front-page">
+          <div class="front-page-icon">🏆</div>
+          <div class="front-page-name">Opportunités</div>
+          <div class="front-page-url">/opportunites</div>
+          <div class="front-page-libs">
+            <span class="lib-tag">Score 100pts</span>
+            <span class="lib-tag">7 critères</span>
+            <span class="lib-tag">Ranking</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
+
+  <!-- ── LAYER 6 : Déploiement ── -->
+  <div class="layer layer-deploy">
+    <div class="layer-header">
+      <span class="layer-icon">🚀</span>
+      <div>
+        <div class="layer-title">Déploiement & Infrastructure</div>
+      </div>
+      <span class="layer-subtitle">Cloud · CI/CD · Monitoring</span>
+    </div>
+    <div class="layer-body">
+      <div class="deploy-grid">
+        <div class="deploy-card">
+          <div class="deploy-card-icon">☁️</div>
+          <div class="deploy-card-name">Render.com</div>
+          <div class="deploy-card-desc">Hébergement API Flask · PostgreSQL managé · Auto-deploy</div>
+        </div>
+        <div class="deploy-card">
+          <div class="deploy-card-icon">🐙</div>
+          <div class="deploy-card-name">GitHub</div>
+          <div class="deploy-card-desc">Versionning du code · Déclenchement auto du build Render</div>
+        </div>
+        <div class="deploy-card">
+          <div class="deploy-card-icon">⚙️</div>
+          <div class="deploy-card-name">Dagster (local)</div>
+          <div class="deploy-card-desc">Pipeline d'ingestion lancé localement · Dagster UI port 3000</div>
+        </div>
+        <div class="deploy-card">
+          <div class="deploy-card-icon">🐍</div>
+          <div class="deploy-card-name">Gunicorn</div>
+          <div class="deploy-card-desc">Serveur WSGI de production pour Flask</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /arch-wrap -->
+
+</body>
+</html>
