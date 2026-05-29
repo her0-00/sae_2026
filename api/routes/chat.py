@@ -124,8 +124,16 @@ def chat_copilot():
                     db_context += f"- Émissions Carbone GES moyenne: Classe {classes[min(7, max(1, dpe_ges['avg_ges']))]}\n"
                 db_context += "\n"
 
+    # 2.5. Récupération de la date actuelle en français
+    from datetime import datetime
+    now = datetime.now()
+    months_fr = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+    date_str = f"{now.day} {months_fr[now.month - 1]} {now.year}"
+
     # 3. Construction du prompt système enrichi de la base de données
-    system_prompt = """Tu es ImmoBI Copilot, un assistant virtuel expert en immobilier en France et en négociation d'achat.
+    system_prompt = f"""Tu es ImmoBI Copilot, un assistant virtuel expert en immobilier en France et en négociation d'achat.
+Nous sommes aujourd'hui le {date_str}.
+
 Ton rôle est d'analyser les projets immobiliers des utilisateurs, de valider la cohérence de leurs budgets, de leur fournir des synthèses territoriales basées sur des chiffres réels et de rédiger d'excellents arguments ou e-mails de négociation.
 Sois chaleureux, pédagogique, précis et structif. Utilise des listes à puces et des caractères gras pour rendre tes réponses très structurées et lisibles.
 
