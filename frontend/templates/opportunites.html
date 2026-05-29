@@ -117,6 +117,41 @@ const fmt  = n => n==null?"—":new Intl.NumberFormat("fr-FR",{style:"currency",
 const fmtN = n => n==null?"—":new Intl.NumberFormat("fr-FR").format(n);
 const fmtP = n => n==null?"—":parseFloat(n).toFixed(1)+" %";
 
+window.addEventListener("DOMContentLoaded", () => {
+  let savedDept = localStorage.getItem("filter_dept");
+  if (!savedDept) {
+    const savedCode = localStorage.getItem("selected_commune_code");
+    if (savedCode && savedCode.length >= 2) {
+      savedDept = savedCode.substring(0, 2);
+      localStorage.setItem("filter_dept", savedDept);
+    }
+  }
+  if (savedDept) document.getElementById("f-dept").value = savedDept;
+
+  const savedType = localStorage.getItem("property_type");
+  if (savedType) document.getElementById("f-type").value = savedType;
+
+  const savedBudget = localStorage.getItem("property_prix");
+  if (savedBudget) document.getElementById("f-budget").value = savedBudget;
+
+  const savedSurface = localStorage.getItem("property_surface");
+  if (savedSurface) document.getElementById("f-surface").value = savedSurface;
+
+  const savedDpe = localStorage.getItem("property_dpe");
+  if (savedDpe) document.getElementById("f-dpe").value = savedDpe;
+
+  // Écouter les changements en direct
+  document.getElementById("f-dept").addEventListener("input", e => localStorage.setItem("filter_dept", e.target.value));
+  document.getElementById("f-type").addEventListener("change", e => localStorage.setItem("property_type", e.target.value));
+  document.getElementById("f-budget").addEventListener("input", e => localStorage.setItem("property_prix", e.target.value));
+  document.getElementById("f-surface").addEventListener("input", e => localStorage.setItem("property_surface", e.target.value));
+  document.getElementById("f-dpe").addEventListener("change", e => localStorage.setItem("property_dpe", e.target.value));
+
+  if (savedDept) {
+    setTimeout(() => { document.getElementById("form").requestSubmit(); }, 100);
+  }
+});
+
 document.getElementById("form").addEventListener("submit",async e=>{
   e.preventDefault();
   const dept    = document.getElementById("f-dept").value.trim();
@@ -129,6 +164,12 @@ document.getElementById("form").addEventListener("submit",async e=>{
   const chomage = document.getElementById("f-chomage").value;
   const bruit   = document.getElementById("f-bruit").value;
   const result  = document.getElementById("result");
+
+  localStorage.setItem("filter_dept", dept);
+  localStorage.setItem("property_type", type);
+  if (budget) localStorage.setItem("property_prix", budget);
+  localStorage.setItem("property_surface", surface);
+  if (dpe) localStorage.setItem("property_dpe", dpe);
 
   result.innerHTML=`<div class="spinner"></div><p class="loading-text">Recherche et notation dans le département ${dept}…</p>`;
 

@@ -82,7 +82,15 @@
       items.forEach(it => {
         const li = document.createElement("li");
         li.innerHTML = `${it.nom_commune} <span>(${it.commune_code})</span>`;
-        li.addEventListener("click", () => { inp.value = it.nom_commune; hid.value = it.commune_code; closeAC(); });
+        li.addEventListener("click", () => {
+          inp.value = it.nom_commune;
+          hid.value = it.commune_code;
+          localStorage.setItem("selected_commune_code", it.commune_code);
+          localStorage.setItem("selected_commune_name", it.nom_commune);
+          const dept = it.commune_code.substring(0, 2);
+          localStorage.setItem("filter_dept", dept);
+          closeAC();
+        });
         ul.appendChild(li);
       });
       inp.parentElement.appendChild(ul);
@@ -92,9 +100,38 @@
     D("btn-go").addEventListener("click", () => { const c = hid.value; if (c) analyser(c) });
     inp.addEventListener("keydown", e => { if (e.key === "Enter" && hid.value) analyser(hid.value) });
 
+    D("inp-type").addEventListener("change", e => {
+      localStorage.setItem("property_type", e.target.value);
+    });
+
     // URL param ?code=
     const urlCode = new URLSearchParams(location.search).get("code");
-    if (urlCode) { hid.value = urlCode; analyser(urlCode) }
+    
+    // Charger le type de bien sauvegardé
+    const savedType = localStorage.getItem("property_type");
+    if (savedType) D("inp-type").value = savedType;
+
+    if (urlCode) {
+      hid.value = urlCode;
+      apiFetch(`/api/communes/${urlCode}/resume`).then(res => {
+        if (res && res.nom_commune) {
+          inp.value = res.nom_commune;
+          localStorage.setItem("selected_commune_code", urlCode);
+          localStorage.setItem("selected_commune_name", res.nom_commune);
+          const dept = urlCode.substring(0, 2);
+          localStorage.setItem("filter_dept", dept);
+        }
+      }).catch(() => {});
+      analyser(urlCode);
+    } else {
+      const savedCode = localStorage.getItem("selected_commune_code");
+      const savedName = localStorage.getItem("selected_commune_name");
+      if (savedCode && savedName) {
+        inp.value = savedName;
+        hid.value = savedCode;
+        analyser(savedCode);
+      }
+    }
 
     async function analyser(code) {
       const type = D("inp-type").value;

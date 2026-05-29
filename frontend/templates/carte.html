@@ -449,6 +449,11 @@
         metricHtml = `<div class="popup-price" style="color:#dc2626; font-size:1.1rem;">${p.pct_bruit != null ? p.pct_bruit.toFixed(1) + '% biens en PEB' : 'Non disponible'}</div>`;
       }
 
+      if (withLink) {
+        localStorage.setItem("selected_commune_code", p.commune_code);
+        localStorage.setItem("selected_commune_name", p.nom_commune);
+      }
+
       panel.innerHTML = `
     <div class="commune-popup">
       <div class="popup-name">${p.nom_commune}</div>
@@ -565,10 +570,37 @@
       } catch (e) {
         console.error(e);
       }
-    }
+    // ── Restauration des informations depuis localStorage ─────────
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedType = localStorage.getItem("property_type");
+      if (savedType) document.getElementById("f-type").value = savedType;
+
+      let savedDept = localStorage.getItem("filter_dept");
+      if (!savedDept) {
+        const savedCode = localStorage.getItem("selected_commune_code");
+        if (savedCode && savedCode.length >= 2) {
+          savedDept = savedCode.substring(0, 2);
+          localStorage.setItem("filter_dept", savedDept);
+        }
+      }
+      if (savedDept) document.getElementById("f-dept").value = savedDept;
+
+      const savedAnnee = localStorage.getItem("filter_annee");
+      if (savedAnnee) document.getElementById("f-annee").value = savedAnnee;
+
+      const savedMetric = localStorage.getItem("filter_metric");
+      if (savedMetric) document.getElementById("f-metric").value = savedMetric;
+      
+      chargerCarte();
+    });
+
+    // Écouter les changements pour sauvegarder dans localStorage
+    document.getElementById("f-type").addEventListener("change", e => localStorage.setItem("property_type", e.target.value));
+    document.getElementById("f-dept").addEventListener("input", e => localStorage.setItem("filter_dept", e.target.value));
+    document.getElementById("f-annee").addEventListener("change", e => localStorage.setItem("filter_annee", e.target.value));
+    document.getElementById("f-metric").addEventListener("change", e => localStorage.setItem("filter_metric", e.target.value));
 
     document.getElementById("btn-load").addEventListener("click", chargerCarte);
-    chargerCarte();
   </script>
 </body>
 

@@ -129,6 +129,10 @@
         li.addEventListener("click", () => {
           inpCommune.value = it.nom_commune;
           hidCommune.value = it.commune_code;
+          localStorage.setItem("selected_commune_code", it.commune_code);
+          localStorage.setItem("selected_commune_name", it.nom_commune);
+          const dept = it.commune_code.substring(0, 2);
+          localStorage.setItem("filter_dept", dept);
           closeAC();
         });
         ul.appendChild(li);
@@ -136,6 +140,42 @@
       inpCommune.parentElement.appendChild(ul);
     }
     function closeAC() { inpCommune.parentElement.querySelector(".autocomplete-list")?.remove() }
+
+    // ── Restauration des informations depuis localStorage ─────────
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedCode = localStorage.getItem("selected_commune_code");
+      const savedName = localStorage.getItem("selected_commune_name");
+      if (savedCode && savedName) {
+        inpCommune.value = savedName;
+        hidCommune.value = savedCode;
+      }
+      
+      const savedType = localStorage.getItem("property_type");
+      if (savedType) D("inp-type").value = savedType;
+      
+      const savedSurface = localStorage.getItem("property_surface");
+      if (savedSurface) D("inp-surface").value = savedSurface;
+      
+      const savedPieces = localStorage.getItem("property_pieces");
+      if (savedPieces) D("inp-pieces").value = savedPieces;
+      
+      const savedDpe = localStorage.getItem("property_dpe");
+      if (savedDpe) D("inp-dpe").value = savedDpe;
+      
+      const savedPrix = localStorage.getItem("property_prix");
+      if (savedPrix) D("inp-prix").value = savedPrix;
+
+      if (savedCode && savedSurface) {
+        setTimeout(() => { D("form").requestSubmit(); }, 100);
+      }
+    });
+
+    // Écouter les changements pour sauvegarder dans localStorage
+    D("inp-type").addEventListener("change", e => localStorage.setItem("property_type", e.target.value));
+    D("inp-surface").addEventListener("input", e => localStorage.setItem("property_surface", e.target.value));
+    D("inp-pieces").addEventListener("input", e => localStorage.setItem("property_pieces", e.target.value));
+    D("inp-dpe").addEventListener("change", e => localStorage.setItem("property_dpe", e.target.value));
+    D("inp-prix").addEventListener("input", e => localStorage.setItem("property_prix", e.target.value));
 
     // ── Soumission du formulaire ─────────────────────────────────
     D("form").addEventListener("submit", async e => {
