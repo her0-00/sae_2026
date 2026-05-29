@@ -81,13 +81,18 @@ CREATE TABLE IF NOT EXISTS dpe (
     classe_ges          CHAR(1),                 -- A à G
     type_batiment       VARCHAR(50),
     annee_construction  SMALLINT,
-    annee_dpe           SMALLINT
+    annee_dpe           SMALLINT,
+    latitude            NUMERIC(10,6),
+    longitude           NUMERIC(10,6),
+    geom                GEOMETRY(Point, 4326)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dpe_commune
     ON dpe(commune_code);
 CREATE INDEX IF NOT EXISTS idx_dpe_adresse
     ON dpe(adresse_normalisee);
+CREATE INDEX IF NOT EXISTS idx_dpe_geom
+    ON dpe USING GIST(geom);
 
 -- =============================================================
 --  4. PEB — Zones de bruit aéroport (polygones)
