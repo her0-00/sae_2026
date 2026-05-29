@@ -549,6 +549,19 @@
             </div>
           </div>
 
+          <!-- Exposition Bruit & Aéroport (PEB) -->
+          <div class="dim-card" style="--dim-color:${est.bruit.peb_pct > 0 ? "var(--danger)" : "#16a34a"}">
+            <div class="dim-icon">🔇</div>
+            <div class="dim-label">Exposition Nuisances Sonores (PEB)</div>
+            <div class="dim-value">${est.bruit.peb_pct > 0 ? `${est.bruit.peb_pct}% des biens exposés` : "Hors zone d'exposition"}</div>
+            <div class="dim-detail">
+              ${est.bruit.peb_pct > 0 ? `Zone affectée par l'aéroport <strong>${est.bruit.peb_aeroports}</strong>` : "Cette commune est calme et préservée des nuisances aéroportuaires réglementées"}
+            </div>
+            <div class="dim-score ${est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "bad" : "ok") : "good"}">
+              ${est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "C" : "B") : "A"}
+            </div>
+          </div>
+
           <!-- Tendance marché -->
           <div class="dim-card" style="--dim-color:${tendancePct > 0 ? "#d97706" : "#16a34a"}">
             <div class="dim-icon">📈</div>
