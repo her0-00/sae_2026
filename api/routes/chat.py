@@ -151,12 +151,26 @@ CONCEPTS CLÉS DE NÉGOCIATION IMMOBILIÈRE :
         # Injecter le prompt système au début de la conversation
         api_messages = [{"role": "system", "content": system_prompt}] + messages
 
-        response = client.chat.completions.create(
-            model=deployment,
-            messages=api_messages,
-            max_tokens=800,
-            temperature=0.7
-        )
+        try:
+            # 1. Tentative standard pour la majorité des modèles (GPT-4o, GPT-3.5, etc.)
+            response = client.chat.completions.create(
+                model=deployment,
+                messages=api_messages,
+                max_tokens=800,
+                temperature=0.7
+            )
+        except Exception as first_err:
+            first_err_str = str(first_err)
+            # 2. Si le modèle rejette 'max_tokens' ou 'temperature' (cas typique des modèles 'o1' de raisonnement)
+            if "max_tokens" in first_err_str or "temperature" in first_err_str or "unsupported_parameter" in first_err_str:
+                log.warning("Appel standard échoué, tentative de secours pour modèle de raisonnement : %s", first_err)
+                response = client.chat.completions.create(
+                    model=deployment,
+                    messages=api_messages,
+                    max_completion_tokens=800
+                )
+            else:
+                raise first_err
 
         assistant_message = response.choices[0].message.content
         return jsonify({
