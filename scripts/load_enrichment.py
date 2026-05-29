@@ -47,10 +47,10 @@ def enrich_dpe(conn):
                     d2.conso_energie
                 FROM transactions t2
                 JOIN dpe d2
-                  ON d2.geom IS NOT NULL
-                  AND ST_DWithin(t2.geom, d2.geom, 0.0003)
+                  ON ST_DWithin(t2.geom, d2.geom, 0.0003)
                 WHERE t2.geom IS NOT NULL
                   AND t2.dpe_classe IS NULL
+                  AND d2.geom IS NOT NULL
                   AND d2.classe_energie IS NOT NULL
                 ORDER BY t2.id, t2.geom <-> d2.geom
             ) d
