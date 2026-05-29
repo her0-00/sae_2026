@@ -32,3 +32,6 @@ pytest-flask==1.3.0
 # Orchestration
 dagster
 dagster-webserver
+
+# AI Assistant
+openai==1.55.3

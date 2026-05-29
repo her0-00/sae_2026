@@ -20,6 +20,7 @@ def create_app():
     from .routes.analyses import bp as analyses_bp
     from .routes.opportunites import bp as opportunites_bp
     from .routes.communes import bp as communes_bp
+    from .routes.chat import bp as chat_bp
 
     app.register_blueprint(transactions_bp, url_prefix="/api/transactions")
     app.register_blueprint(estimateur_bp,   url_prefix="/api/estimateur")
@@ -27,6 +28,7 @@ def create_app():
     app.register_blueprint(analyses_bp,     url_prefix="/api/analyses")
     app.register_blueprint(opportunites_bp, url_prefix="/api/opportunites")
     app.register_blueprint(communes_bp,     url_prefix="/api/communes")
+    app.register_blueprint(chat_bp,         url_prefix="/api/chat")
 
     # Pages HTML
     @app.route("/")
