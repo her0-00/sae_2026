@@ -32,12 +32,12 @@
   <!-- Formulaire filtres -->
   <div class="card" style="margin-bottom:2rem">
     <div style="font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1rem">
-      Critères de recherche
+      Critères de recherche multi-critères
     </div>
-    <form id="form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;align-items:end">
+    <form id="form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;align-items:end">
       <div class="form-group">
         <label>Département *</label>
-        <input id="f-dept" type="text" placeholder="ex: 69, 35, 44…" maxlength="3" required>
+        <input id="f-dept" type="text" placeholder="ex: 44, 56…" maxlength="3" required>
       </div>
       <div class="form-group">
         <label>Type de bien</label>
@@ -48,29 +48,65 @@
       </div>
       <div class="form-group">
         <label>Budget max (€)</label>
-        <input id="f-budget" type="number" placeholder="300 000" min="0">
+        <input id="f-budget" type="number" placeholder="ex: 250 000" min="0">
       </div>
       <div class="form-group">
         <label>Surface estimée (m²)</label>
-        <input id="f-surface" type="number" placeholder="60" min="5">
+        <input id="f-surface" type="number" placeholder="ex: 70" min="5" value="70">
       </div>
-      <button type="submit" class="btn btn-primary btn-lg" style="align-self:end">
+      <div class="form-group">
+        <label>DPE Minimum</label>
+        <select id="f-dpe">
+          <option value="">Tous les DPE</option>
+          <option value="A">A — Très économe</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+          <option value="E">E</option>
+          <option value="F">F</option>
+          <option value="G">G — Très énergivore</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Dist. max Gare (m)</label>
+        <input id="f-gare" type="number" placeholder="ex: 2000" min="100">
+      </div>
+      <div class="form-group">
+        <label>Dist. max École (m)</label>
+        <input id="f-ecole" type="number" placeholder="ex: 1000" min="100">
+      </div>
+      <div class="form-group">
+        <label>Chômage max (%)</label>
+        <input id="f-chomage" type="number" placeholder="ex: 8" min="0" max="100" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Zone bruit max (%)</label>
+        <input id="f-bruit" type="number" placeholder="ex: 10" min="0" max="100">
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg" style="align-self:end; grid-column: span 1;">
         Trouver les opportunités →
       </button>
     </form>
 
-    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted)">
-      <strong>Score composite :</strong>
-      50 % prix sous la médiane du département ·
-      50 % revenu médian relatif.
-      Plus le score est élevé, plus la commune offre un bon rapport qualité/prix.
+    <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted); line-height: 1.4;">
+      <strong>Score composite d'attractivité (100 pts) :</strong>
+      💰 25% Prix/m² attractif · 
+      👥 15% Niveau de revenu local · 
+      👔 15% Dynamisme du marché de l'emploi · 
+      ⚡ 15% Qualité énergétique DPE · 
+      🚂 10% Proximité gares * · 
+      🎓 10% Proximité écoles * · 
+      🔇 10% Calme sonore (PEB).
+      <div style="font-size: 0.72rem; margin-top: 0.4rem; font-style: italic;">
+        * Les distances aux gares et écoles sont les moyennes réelles mesurées sur toutes les transactions immobilières de chaque commune.
+      </div>
     </div>
   </div>
 
   <!-- Résultats -->
   <div id="result">
     <div class="alert alert-info">
-      Renseignez un département pour découvrir les communes les plus attractives.
+      Renseignez un département (44, 56) pour découvrir les communes les plus attractives selon vos critères.
     </div>
   </div>
 </div>
@@ -87,13 +123,23 @@ document.getElementById("form").addEventListener("submit",async e=>{
   const type    = document.getElementById("f-type").value;
   const budget  = document.getElementById("f-budget").value;
   const surface = document.getElementById("f-surface").value;
+  const dpe     = document.getElementById("f-dpe").value;
+  const gare    = document.getElementById("f-gare").value;
+  const ecole   = document.getElementById("f-ecole").value;
+  const chomage = document.getElementById("f-chomage").value;
+  const bruit   = document.getElementById("f-bruit").value;
   const result  = document.getElementById("result");
 
-  result.innerHTML=`<div class="spinner"></div><p class="loading-text">Analyse du département ${dept}…</p>`;
+  result.innerHTML=`<div class="spinner"></div><p class="loading-text">Recherche et notation dans le département ${dept}…</p>`;
 
   const params = new URLSearchParams({departement:dept,type});
   if(budget)  params.set("budget_max",budget);
   if(surface) params.set("surface",surface);
+  if(dpe)     params.set("dpe_min",dpe);
+  if(gare)    params.set("dist_gare_max",gare);
+  if(ecole)   params.set("dist_ecole_max",ecole);
+  if(chomage) params.set("chomage_max",chomage);
+  if(bruit)   params.set("bruit_max",bruit);
 
   try{
     const r = await fetch(API+"/api/opportunites?"+params);
@@ -106,81 +152,108 @@ document.getElementById("form").addEventListener("submit",async e=>{
 });
 
 function scoreColor(s){
-  if(s>=70)return"var(--success)";
-  if(s>=45)return"var(--warning)";
+  if(s>=75)return"var(--success)";
+  if(s>=50)return"var(--warning)";
   return"var(--danger)";
 }
 
 function renderResultats(rows,dept,type){
   const result=document.getElementById("result");
   if(!rows.length){
-    result.innerHTML=`<div class="alert alert-info">Aucune commune trouvée pour ces critères. Essayez d'élargir votre budget ou de changer de département.</div>`;
+    result.innerHTML=`<div class="alert alert-info">Aucune commune trouvée pour ces critères. Essayez d'élargir vos contraintes ou de changer de département.</div>`;
     return;
   }
-
-  const maxScore=rows[0]?.score_total||100;
 
   const cardsHtml = rows.map((r,i)=>{
     const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`;
     const numCls=i===0?"gold":i===1?"silver":i===2?"bronze":"";
     const score=parseFloat(r.score_total)||0;
     const pm2=r.prix_m2_median?Math.round(r.prix_m2_median):null;
-    const budgetCalc = document.getElementById("f-budget").value && document.getElementById("f-surface").value
-      ? pm2 * parseFloat(document.getElementById("f-surface").value) : null;
+    const surfaceForm = parseFloat(document.getElementById("f-surface").value) || 70;
+    const budgetCalc = pm2 ? pm2 * surfaceForm : null;
 
     return`
     <div class="rank-row">
       <div class="rank-num ${numCls}" title="Rang ${i+1}">${medal}</div>
 
-      <div class="rank-info" style="min-width:0">
-        <h4><a href="/commune?code=${r.commune_code}" style="color:var(--text);text-decoration:none;hover:underline">${r.nom_commune}</a></h4>
-        <p>${r.commune_code} · Dept. ${r.departement_code} · ${fmtN(r.nb_transactions)} transactions</p>
-        <div style="display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.35rem">
-          <span class="stat-pill">💰 ${pm2?fmtN(pm2)+" €/m²":"—"}</span>
-          ${r.revenu_median?`<span class="stat-pill">👥 ${fmt(r.revenu_median)}/an</span>`:""}
-          ${budgetCalc?`<span class="stat-pill">🏠 ~${fmt(budgetCalc)} estimé</span>`:""}
+      <div class="rank-info" style="min-width:0; flex: 1;">
+        <h4><a href="/commune?code=${r.commune_code}" style="color:var(--text);text-decoration:none;font-weight:700;">${r.nom_commune}</a></h4>
+        <p>${r.commune_code} · Dept. ${r.departement_code} · ${fmtN(r.nb_transactions)} transactions /an</p>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.45rem">
+          <span class="stat-pill" title="Prix au m² médian calculé sur les transactions réelles de la commune">💰 ${pm2?fmtN(pm2)+" €/m²":"—"} ⓘ</span>
+          ${budgetCalc?`<span class="stat-pill" style="background:#fef3c7; border-color:#fde68a;" title="Budget estimé pour un logement de ${surfaceForm}m² basé sur le prix médian local.">🏠 ~${fmt(budgetCalc)} (${surfaceForm}m²) ⓘ</span>`:""}
+          ${r.revenu_median?`<span class="stat-pill" title="Revenu disponible médian annuel par ménage (INSEE Filosofi) : 50% des ménages gagnent plus, 50% gagnent moins.">👥 Revenu : ${fmt(r.revenu_median)}/an ⓘ</span>`:""}
+          ${r.taux_chomage!=null?`<span class="stat-pill" title="Taux de chômage au sens du recensement INSEE de la population active (15-64 ans) de la commune.">👔 Chômage : ${fmtP(r.taux_chomage)} ⓘ</span>`:""}
+          <span class="stat-pill" title="Distance moyenne calculée sur toutes les transactions immobilières de la commune">🚂 Gare : ${r.avg_dist_gare != null ? fmtN(Math.round(r.avg_dist_gare)) + 'm' : '—'} ⓘ</span>
+          <span class="stat-pill" title="Distance moyenne calculée sur toutes les transactions immobilières de la commune">🎓 École : ${r.avg_dist_ecole != null ? fmtN(Math.round(r.avg_dist_ecole)) + 'm' : '—'} ⓘ</span>
+          <span class="stat-pill" style="${r.pct_bruit > 0 ? 'color:#dc2626;background:rgba(220,38,38,0.05);' : ''}" title="Plan d'Exposition au Bruit : pourcentage de transactions situées dans une zone de nuisances sonores aéroportuaires réglementaire.">🔇 PEB : ${r.pct_bruit != null ? r.pct_bruit.toFixed(1) + '%' : '—'} ⓘ</span>
         </div>
       </div>
 
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:1.5rem;font-weight:800;color:${scoreColor(score)}">${score}</div>
+      <div style="text-align:right;flex-shrink:0; margin-left: 1rem;">
+        <div style="font-size:1.6rem;font-weight:800;color:${scoreColor(score)}">${score}</div>
         <div style="font-size:.72rem;color:var(--muted);margin-bottom:.3rem">/ 100</div>
-        <a href="/commune?code=${r.commune_code}" class="btn btn-outline btn-sm">Voir →</a>
+        <a href="/commune?code=${r.commune_code}" class="btn btn-outline btn-sm">Dossier →</a>
       </div>
 
-      <div style="flex:0 0 100%;padding-left:52px" class="score-breakdown">
-        <div class="score-row">
-          <span class="score-row-label">Prix</span>
-          <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_prix||0}%;background:var(--primary)"></div></div>
-          <span class="score-row-val" style="color:var(--primary)">${Math.round(r.score_prix||0)}</span>
-        </div>
-        <div class="score-row">
-          <span class="score-row-label">Revenu</span>
-          <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_revenu||0}%;background:var(--teal)"></div></div>
-          <span class="score-row-val" style="color:var(--teal)">${Math.round(r.score_revenu||0)}</span>
+      <div style="flex:0 0 100%;padding-left:52px;margin-top:0.75rem;" class="score-breakdown">
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; background: var(--bg); padding: 0.75rem; border-radius: var(--r); border: 1px solid var(--border);">
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">💰 Prix</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_prix||0}%;background:var(--primary)"></div></div>
+            <span class="score-row-val" style="color:var(--primary);font-size:0.75rem;font-weight:700;">${Math.round(r.score_prix||0)}</span>
+          </div>
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">👥 Revenu</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_revenu||0}%;background:#0d9488"></div></div>
+            <span class="score-row-val" style="color:#0d9488;font-size:0.75rem;font-weight:700;">${Math.round(r.score_revenu||0)}</span>
+          </div>
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">👔 Marché</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_chomage||0}%;background:#ef8023"></div></div>
+            <span class="score-row-val" style="color:#ef8023;font-size:0.75rem;font-weight:700;">${Math.round(r.score_chomage||0)}</span>
+          </div>
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">⚡ Énergie</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_dpe||0}%;background:#16a34a"></div></div>
+            <span class="score-row-val" style="color:#16a34a;font-size:0.75rem;font-weight:700;">${Math.round(r.score_dpe||0)}</span>
+          </div>
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">🚂 Transports</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_transport||0}%;background:#7c3aed"></div></div>
+            <span class="score-row-val" style="color:#7c3aed;font-size:0.75rem;font-weight:700;">${Math.round(r.score_transport||0)}</span>
+          </div>
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">🎓 Écoles</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_ecole||0}%;background:#2563eb"></div></div>
+            <span class="score-row-val" style="color:#2563eb;font-size:0.75rem;font-weight:700;">${Math.round(r.score_ecole||0)}</span>
+          </div>
+          <div class="score-row">
+            <span class="score-row-label" style="width:75px;font-size:0.75rem;">🔇 Calme</span>
+            <div class="score-row-bar"><div class="score-row-fill" style="width:${r.score_bruit||0}%;background:#475569"></div></div>
+            <span class="score-row-val" style="color:#475569;font-size:0.75rem;font-weight:700;">${Math.round(r.score_bruit||0)}</span>
+          </div>
         </div>
       </div>
     </div>`;
   }).join("");
 
   result.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem">
       <div>
-        <span style="font-weight:700;font-size:1.05rem">Top ${rows.length} communes — Département ${dept} · ${type}</span>
+        <span style="font-weight:700;font-size:1.05rem">Top ${rows.length} communes d'opportunité — Département ${dept} · ${type}</span>
       </div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-        ${rows[0]?`<span class="market-badge market-stable">🏆 Meilleure : ${rows[0].nom_commune} (score ${rows[0].score_total})</span>`:""}
+        ${rows[0]?`<span class="market-badge market-hot" style="background:#d1fae5; color:#065f46;">🏆 Meilleure opportunité : ${rows[0].nom_commune} (score ${rows[0].score_total}/100)</span>`:""}
       </div>
     </div>
 
     <div id="rank-list">${cardsHtml}</div>
 
-    <div class="insight mt-2">
+    <div class="insight mt-2" style="background: rgba(37,99,235,0.06); border-left: 4px solid var(--primary);">
       <div class="insight-icon">💡</div>
-      <div class="insight-text">
-        <strong>Comment lire ce classement</strong> : Le score "Prix" mesure à quel point la commune est sous-évaluée par rapport à la médiane départementale.
-        Le score "Revenu" reflète la richesse relative des ménages. Un score élevé sur les deux indique une commune avec
-        <strong>un fort potentiel de valorisation</strong> et une population à pouvoir d'achat solide.
+      <div class="insight-text" style="color:var(--text); line-height:1.4;">
+        <strong>Interprétation des scores d'attractivité</strong> : Un score global supérieur à 75 indique un excellent équilibre entre prix compétitifs, bassin d'emplois dynamique, haute performance DPE, calme environnemental, et gares/écoles accessibles à pied ou à vélo.
       </div>
     </div>
   `;

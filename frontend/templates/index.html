@@ -1,246 +1,253 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ImmoBI — Analyseur de prix immobilier</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
 </head>
+
 <body>
-<nav>
-  <div class="nav-inner">
-    <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
-    <ul class="nav-links">
-      <li><a href="/" class="active">Analyser</a></li>
-      <li><a href="/carte">Carte des prix</a></li>
-      <li><a href="/commune">Fiche commune</a></li>
-      <li><a href="/opportunites">Opportunités</a></li>
-    </ul>
-  </div>
-</nav>
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
+      <ul class="nav-links">
+        <li><a href="/" class="active">Analyser</a></li>
+        <li><a href="/carte">Carte des prix</a></li>
+        <li><a href="/commune">Fiche commune</a></li>
+        <li><a href="/opportunites">Opportunités</a></li>
+      </ul>
+    </div>
+  </nav>
 
-<div class="page-header">
-  <div class="container">
-    <h1>Ce bien est-il au bon prix ?</h1>
-    <p>Comparez n'importe quel bien aux transactions réelles du marché, enrichies des données DPE, transport et contexte socio-économique.</p>
-  </div>
-</div>
-
-<div class="container" style="padding-top:2rem;padding-bottom:3rem">
-
-  <!-- Formulaire -->
-  <div class="card" style="margin-bottom:1.5rem">
-    <form id="form" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;align-items:end">
-      <div class="form-group autocomplete-wrap">
-        <label>Commune *</label>
-        <input id="inp-commune" type="text" placeholder="Lyon, Rennes…" autocomplete="off" required>
-        <input id="hid-commune" type="hidden">
-      </div>
-      <div class="form-group">
-        <label>Type de bien *</label>
-        <select id="inp-type">
-          <option value="Appartement">Appartement</option>
-          <option value="Maison">Maison</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Surface (m²) *</label>
-        <input id="inp-surface" type="number" min="5" max="2000" placeholder="65">
-      </div>
-      <div class="form-group">
-        <label>Nb. pièces</label>
-        <input id="inp-pieces" type="number" min="1" max="20" placeholder="3">
-      </div>
-      <div class="form-group">
-        <label>Classe DPE connue</label>
-        <select id="inp-dpe">
-          <option value="">Inconnue</option>
-          <option value="A">A — Très efficace</option>
-          <option value="B">B</option><option value="C">C</option>
-          <option value="D">D</option><option value="E">E</option>
-          <option value="F">F</option>
-          <option value="G">G — Très énergivore</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Prix demandé (€) <span class="text-muted text-sm">optionnel</span></label>
-        <input id="inp-prix" type="number" min="0" placeholder="280 000">
-      </div>
-      <button type="submit" class="btn btn-primary btn-lg" style="align-self:end">
-        Analyser →
-      </button>
-    </form>
+  <div class="page-header">
+    <div class="container">
+      <h1>Ce bien est-il au bon prix ?</h1>
+      <p>Comparez n'importe quel bien aux transactions réelles du marché, enrichies des données DPE, transport et
+        contexte socio-économique.</p>
+    </div>
   </div>
 
-  <!-- Résultat -->
-  <div id="result"></div>
-</div>
+  <div class="container" style="padding-top:2rem;padding-bottom:3rem">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script type="module">
-const API = "";
-let charts = {};
+    <!-- Formulaire -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <form id="form"
+        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;align-items:end">
+        <div class="form-group autocomplete-wrap">
+          <label>Commune *</label>
+          <input id="inp-commune" type="text" placeholder="Lyon, Rennes…" autocomplete="off" required>
+          <input id="hid-commune" type="hidden">
+        </div>
+        <div class="form-group">
+          <label>Type de bien *</label>
+          <select id="inp-type">
+            <option value="Appartement">Appartement</option>
+            <option value="Maison">Maison</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Surface (m²) *</label>
+          <input id="inp-surface" type="number" min="5" max="2000" placeholder="65">
+        </div>
+        <div class="form-group">
+          <label>Nb. pièces</label>
+          <input id="inp-pieces" type="number" min="1" max="20" placeholder="3">
+        </div>
+        <div class="form-group">
+          <label>Classe DPE connue</label>
+          <select id="inp-dpe">
+            <option value="">Inconnue</option>
+            <option value="A">A — Très efficace</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="G">G — Très énergivore</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Prix demandé (€) <span class="text-muted text-sm">optionnel</span></label>
+          <input id="inp-prix" type="number" min="0" placeholder="280 000">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" style="align-self:end">
+          Analyser →
+        </button>
+      </form>
+    </div>
 
-// ── Utilitaires ──────────────────────────────────────────────
-const fmt  = n => n == null ? "—" : new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
-const fmtN = n => n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n);
-const fmtPct = n => n == null ? "—" : parseFloat(n).toFixed(1) + " %";
-const D = id => document.getElementById(id);
+    <!-- Résultat -->
+    <div id="result"></div>
+  </div>
 
-function debounce(fn,ms=250){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
-function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module">
+    const API = "";
+    let charts = {};
 
-async function apiFetch(url,opt={}){
-  const r = await fetch(API+url,{headers:{"Content-Type":"application/json"},...opt});
-  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||`HTTP ${r.status}`)}
-  return r.json();
-}
+    // ── Utilitaires ──────────────────────────────────────────────
+    const fmt = n => n == null ? "—" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+    const fmtN = n => n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n);
+    const fmtPct = n => n == null ? "—" : parseFloat(n).toFixed(1) + " %";
+    const D = id => document.getElementById(id);
 
-// ── Autocomplete commune ─────────────────────────────────────
-const inpCommune = D("inp-commune");
-const hidCommune = D("hid-commune");
+    function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
+    function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id] } }
 
-inpCommune.addEventListener("input", debounce(async()=>{
-  const q = inpCommune.value.trim();
-  if(q.length<2){closeAC();return}
-  try{
-    const res = await apiFetch(`/api/communes/search?q=${encodeURIComponent(q)}`);
-    renderAC(res);
-  }catch{closeAC()}
-}));
-document.addEventListener("click",e=>{if(e.target!==inpCommune)closeAC()});
+    async function apiFetch(url, opt = {}) {
+      const r = await fetch(API + url, { headers: { "Content-Type": "application/json" }, ...opt });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `HTTP ${r.status}`) }
+      return r.json();
+    }
 
-function renderAC(items){
-  closeAC();
-  if(!items.length)return;
-  const ul=document.createElement("ul");
-  ul.className="autocomplete-list";
-  items.forEach(it=>{
-    const li=document.createElement("li");
-    li.innerHTML=`${it.nom_commune} <span>(${it.commune_code})</span>`;
-    li.addEventListener("click",()=>{
-      inpCommune.value=it.nom_commune;
-      hidCommune.value=it.commune_code;
+    // ── Autocomplete commune ─────────────────────────────────────
+    const inpCommune = D("inp-commune");
+    const hidCommune = D("hid-commune");
+
+    inpCommune.addEventListener("input", debounce(async () => {
+      const q = inpCommune.value.trim();
+      if (q.length < 2) { closeAC(); return }
+      try {
+        const res = await apiFetch(`/api/communes/search?q=${encodeURIComponent(q)}`);
+        renderAC(res);
+      } catch { closeAC() }
+    }));
+    document.addEventListener("click", e => { if (e.target !== inpCommune) closeAC() });
+
+    function renderAC(items) {
       closeAC();
+      if (!items.length) return;
+      const ul = document.createElement("ul");
+      ul.className = "autocomplete-list";
+      items.forEach(it => {
+        const li = document.createElement("li");
+        li.innerHTML = `${it.nom_commune} <span>(${it.commune_code})</span>`;
+        li.addEventListener("click", () => {
+          inpCommune.value = it.nom_commune;
+          hidCommune.value = it.commune_code;
+          closeAC();
+        });
+        ul.appendChild(li);
+      });
+      inpCommune.parentElement.appendChild(ul);
+    }
+    function closeAC() { inpCommune.parentElement.querySelector(".autocomplete-list")?.remove() }
+
+    // ── Soumission du formulaire ─────────────────────────────────
+    D("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const code = hidCommune.value;
+      if (!code) { showErr("Sélectionnez une commune dans la liste."); return }
+      const surface = parseFloat(D("inp-surface").value);
+      if (!surface) { showErr("Surface requise."); return }
+
+      D("result").innerHTML = `<div class="spinner"></div><p class="loading-text">Analyse en cours…</p>`;
+
+      const body = { commune_code: code, surface, type_local: D("inp-type").value };
+      const prixDemande = parseFloat(D("inp-prix").value) || null;
+      if (prixDemande) body.prix_demande = prixDemande;
+
+      try {
+        const [est, resume, dpe, transport, tendances, txList] = await Promise.allSettled([
+          apiFetch("/api/estimateur", { method: "POST", body: JSON.stringify(body) }),
+          apiFetch(`/api/communes/${code}/resume`),
+          apiFetch(`/api/analyses/dpe?commune_code=${code}&type=${D("inp-type").value}`),
+          apiFetch(`/api/analyses/transport?commune_code=${code}&type=${D("inp-type").value}`),
+          apiFetch(`/api/analyses/tendances?commune_code=${code}&type=${D("inp-type").value}`),
+          apiFetch(`/api/transactions?commune_code=${code}&per_page=8`),
+        ]);
+
+        const data = {
+          est: est.status === "fulfilled" ? est.value : null,
+          resume: resume.status === "fulfilled" ? resume.value : null,
+          dpe: dpe.status === "fulfilled" ? dpe.value : [],
+          transport: transport.status === "fulfilled" ? transport.value : [],
+          tendances: tendances.status === "fulfilled" ? tendances.value : [],
+          txList: txList.status === "fulfilled" ? txList.value : [],
+        };
+
+        if (!data.est) { showErr("Pas assez de données pour cette commune. Essayez une ville plus grande."); return }
+
+        // Normaliser les champs numériques
+        if (data.resume) {
+          data.resume.revenu_median = parseFloat(data.resume.revenu_median) || null;
+          data.resume.taux_chomage = parseFloat(data.resume.taux_chomage) || null;
+          data.resume.prix_m2_median = parseFloat(data.resume.prix_m2_median) || null;
+        }
+        data.tendances = data.tendances.map(t => ({ ...t, prix_m2_median: parseFloat(t.prix_m2_median) || null }));
+        data.dpe = data.dpe.map(d => ({ ...d, prix_m2_median: parseFloat(d.prix_m2_median) || null }));
+        data.transport = data.transport.map(t => ({ ...t, prix_m2_median: parseFloat(t.prix_m2_median) || null }));
+
+        renderResult(data, body, D("inp-dpe").value, prixDemande);
+      } catch (err) { showErr(err.message) }
     });
-    ul.appendChild(li);
-  });
-  inpCommune.parentElement.appendChild(ul);
-}
-function closeAC(){inpCommune.parentElement.querySelector(".autocomplete-list")?.remove()}
 
-// ── Soumission du formulaire ─────────────────────────────────
-D("form").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const code = hidCommune.value;
-  if(!code){showErr("Sélectionnez une commune dans la liste.");return}
-  const surface = parseFloat(D("inp-surface").value);
-  if(!surface){showErr("Surface requise.");return}
-
-  D("result").innerHTML=`<div class="spinner"></div><p class="loading-text">Analyse en cours…</p>`;
-
-  const body={commune_code:code,surface,type_local:D("inp-type").value};
-  const prixDemande = parseFloat(D("inp-prix").value)||null;
-  if(prixDemande) body.prix_demande = prixDemande;
-
-  try{
-    const [est, resume, dpe, transport, tendances, txList] = await Promise.allSettled([
-      apiFetch("/api/estimateur",{method:"POST",body:JSON.stringify(body)}),
-      apiFetch(`/api/communes/${code}/resume`),
-      apiFetch(`/api/analyses/dpe?commune_code=${code}&type=${D("inp-type").value}`),
-      apiFetch(`/api/analyses/transport?commune_code=${code}&type=${D("inp-type").value}`),
-      apiFetch(`/api/analyses/tendances?commune_code=${code}&type=${D("inp-type").value}`),
-      apiFetch(`/api/transactions?commune_code=${code}&per_page=8`),
-    ]);
-
-    const data = {
-      est:       est.status==="fulfilled"       ? est.value       : null,
-      resume:    resume.status==="fulfilled"    ? resume.value    : null,
-      dpe:       dpe.status==="fulfilled"       ? dpe.value       : [],
-      transport: transport.status==="fulfilled" ? transport.value : [],
-      tendances: tendances.status==="fulfilled" ? tendances.value : [],
-      txList:    txList.status==="fulfilled"    ? txList.value    : [],
-    };
-
-    if(!data.est){showErr("Pas assez de données pour cette commune. Essayez une ville plus grande.");return}
-
-    // Normaliser les champs numériques
-    if(data.resume){
-      data.resume.revenu_median   = parseFloat(data.resume.revenu_median)   || null;
-      data.resume.taux_chomage    = parseFloat(data.resume.taux_chomage)    || null;
-      data.resume.prix_m2_median  = parseFloat(data.resume.prix_m2_median)  || null;
+    function showErr(msg) {
+      D("result").innerHTML = `<div class="alert alert-error">${msg}</div>`;
     }
-    data.tendances = data.tendances.map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
-    data.dpe       = data.dpe.map(d=>({...d, prix_m2_median: parseFloat(d.prix_m2_median)||null}));
-    data.transport = data.transport.map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
 
-    renderResult(data, body, D("inp-dpe").value, prixDemande);
-  }catch(err){showErr(err.message)}
-});
+    // ── Rendu principal ──────────────────────────────────────────
+    function renderResult(data, body, dpeClasse, prixDemande) {
+      const { est, resume, dpe, transport, tendances, txList } = data;
+      const score = est.score_deal;
+      const pctile = prixDemande ? Math.round((prixDemande / body.surface - est.prix_m2_q25) / (est.prix_m2_q75 - est.prix_m2_q25) * 50 + 25) : null;
+      const markerPct = pctile ? Math.max(2, Math.min(98, pctile)) : Math.round((est.prix_m2_median - est.prix_m2_q25) / (est.prix_m2_q75 - est.prix_m2_q25) * 50 + 25);
 
-function showErr(msg){
-  D("result").innerHTML=`<div class="alert alert-error">${msg}</div>`;
-}
+      // Tendance prix (dernier trimestre vs - 2 ans)
+      let tendanceDelta = null, tendancePct = null;
+      if (tendances.length >= 4) {
+        const last = tendances[tendances.length - 1];
+        const old = tendances[Math.max(0, tendances.length - 8)];
+        if (last?.prix_m2_median && old?.prix_m2_median) {
+          tendanceDelta = last.prix_m2_median - old.prix_m2_median;
+          tendancePct = ((tendanceDelta / old.prix_m2_median) * 100).toFixed(1);
+        }
+      }
 
-// ── Rendu principal ──────────────────────────────────────────
-function renderResult(data, body, dpeClasse, prixDemande){
-  const {est,resume,dpe,transport,tendances,txList} = data;
-  const score = est.score_deal;
-  const pctile = prixDemande ? Math.round((prixDemande/body.surface - est.prix_m2_q25)/(est.prix_m2_q75-est.prix_m2_q25)*50+25) : null;
-  const markerPct = pctile ? Math.max(2,Math.min(98,pctile)) : Math.round((est.prix_m2_median-est.prix_m2_q25)/(est.prix_m2_q75-est.prix_m2_q25)*50+25);
+      // DPE: impact de la classe connue
+      let dpeInsight = "";
+      if (dpeClasse && dpe.length > 1) {
+        const mediane = dpe.find(d => d.dpe_classe === "D")?.prix_m2_median || est.prix_m2_median;
+        const selected = dpe.find(d => d.dpe_classe === dpeClasse);
+        if (selected && mediane) {
+          const delta = ((selected.prix_m2_median - mediane) / mediane * 100).toFixed(1);
+          const sign = delta > 0 ? "+" : "";
+          dpeInsight = `Classe ${dpeClasse} : ${sign}${delta}% vs classe D dans cette commune`;
+        }
+      }
 
-  // Tendance prix (dernier trimestre vs - 2 ans)
-  let tendanceDelta = null, tendancePct = null;
-  if(tendances.length>=4){
-    const last = tendances[tendances.length-1];
-    const old  = tendances[Math.max(0,tendances.length-8)];
-    if(last?.prix_m2_median && old?.prix_m2_median){
-      tendanceDelta = last.prix_m2_median - old.prix_m2_median;
-      tendancePct   = ((tendanceDelta/old.prix_m2_median)*100).toFixed(1);
-    }
-  }
+      // Transport: tranche la plus proche
+      let transportInsight = "";
+      if (transport.length > 0) {
+        const near = transport[0];
+        const far = transport[transport.length - 1];
+        if (near && far && near.prix_m2_median && far.prix_m2_median) {
+          const delta = ((near.prix_m2_median - far.prix_m2_median) / far.prix_m2_median * 100).toFixed(0);
+          transportInsight = near.tranche_distance === "0-500m"
+            ? `Prime gare (< 500m) : +${delta}% vs biens éloignés (>${far.tranche_distance})`
+            : `${near.tranche_distance} de la gare · prime proximité : +${delta}%`;
+        }
+      }
 
-  // DPE: impact de la classe connue
-  let dpeInsight = "";
-  if(dpeClasse && dpe.length>1){
-    const mediane = dpe.find(d=>d.dpe_classe==="D")?.prix_m2_median || est.prix_m2_median;
-    const selected= dpe.find(d=>d.dpe_classe===dpeClasse);
-    if(selected && mediane){
-      const delta = ((selected.prix_m2_median-mediane)/mediane*100).toFixed(1);
-      const sign  = delta>0?"+":"";
-      dpeInsight  = `Classe ${dpeClasse} : ${sign}${delta}% vs classe D dans cette commune`;
-    }
-  }
-
-  // Transport: tranche la plus proche
-  let transportInsight = "";
-  if(transport.length>0){
-    const near = transport[0];
-    const far  = transport[transport.length-1];
-    if(near && far && near.prix_m2_median && far.prix_m2_median){
-      const delta = ((near.prix_m2_median-far.prix_m2_median)/far.prix_m2_median*100).toFixed(0);
-      transportInsight = near.tranche_distance==="0-500m"
-        ? `Prime gare (< 500m) : +${delta}% vs biens éloignés (>${far.tranche_distance})`
-        : `${near.tranche_distance} de la gare · prime proximité : +${delta}%`;
-    }
-  }
-
-  D("result").innerHTML = `
+      D("result").innerHTML = `
     <!-- Verdict -->
     ${score ? `
     <div class="verdict ${score}" id="verdict-block">
-      <div class="verdict-icon">${score==="excellent"?"🌟":score==="bon"?"✅":score==="correct"?"🟡":"🔴"}</div>
+      <div class="verdict-icon">${score === "excellent" ? "🌟" : score === "bon" ? "✅" : score === "correct" ? "🟡" : "🔴"}</div>
       <div>
-        <div class="verdict-title">${score==="excellent"?"Excellent deal":score==="bon"?"Bon prix":score==="correct"?"Prix dans la norme":"Prix au-dessus du marché"}</div>
+        <div class="verdict-title">${score === "excellent" ? "Excellent deal" : score === "bon" ? "Bon prix" : score === "correct" ? "Prix dans la norme" : "Prix au-dessus du marché"}</div>
         <div class="verdict-sub">
-          ${score==="excellent"?"Ce bien est significativement sous-évalué par rapport au marché.":
-            score==="bon"?"Ce bien est légèrement en dessous du prix médian.":
-            score==="correct"?"Le prix est conforme au marché local.":
-            "Ce bien est au-dessus du 3ème quartile. Négociation conseillée."}
+          ${score === "excellent" ? "Ce bien est significativement sous-évalué par rapport au marché." :
+            score === "bon" ? "Ce bien est légèrement en dessous du prix médian." :
+              score === "correct" ? "Le prix est conforme au marché local." :
+                "Ce bien est au-dessus du 3ème quartile. Négociation conseillée."}
         </div>
       </div>
-      <div class="verdict-badge">${score==="excellent"?"Excellent":score==="bon"?"Bon prix":score==="correct"?"Correct":"Cher"}</div>
+      <div class="verdict-badge">${score === "excellent" ? "Excellent" : score === "bon" ? "Bon prix" : score === "correct" ? "Correct" : "Cher"}</div>
     </div>` : ""}
 
     <div class="grid-2" style="margin-bottom:1.5rem">
@@ -261,11 +268,11 @@ function renderResult(data, body, dpeClasse, prixDemande){
         <div class="percentile-wrap mt-2">
           <div class="percentile-label">
             <span>Bon marché</span>
-            <span style="font-weight:600">${fmt(prixDemande/body.surface)} /m² demandé</span>
+            <span style="font-weight:600">${fmt(prixDemande / body.surface)} /m² demandé</span>
             <span>Cher</span>
           </div>
           <div class="percentile-track">
-            <div class="percentile-marker" style="left:${markerPct}%" title="${fmt(prixDemande/body.surface)} /m²"></div>
+            <div class="percentile-marker" style="left:${markerPct}%" title="${fmt(prixDemande / body.surface)} /m²"></div>
           </div>
           <div class="percentile-zones">
             <span>P25 · ${fmt(est.prix_m2_q25)}/m²</span>
@@ -285,25 +292,91 @@ function renderResult(data, body, dpeClasse, prixDemande){
           </div>
         </div>`}
 
+        <!-- Rénovation énergétique / passoire thermique -->
+        ${['F', 'G'].includes(dpeClasse) ? `
+        <div class="alert alert-warning mt-2" style="background: rgba(239, 128, 35, 0.08); border-left: 4px solid #ef8023; padding: 1rem; border-radius: var(--r); margin-top: 1.25rem; margin-bottom: 0.5rem;">
+          <h4 style="color:#ef8023; font-weight:700; margin:0 0 0.4rem 0; font-size: 0.88rem; display:flex; align-items:center; gap:0.4rem;">
+            ⚡ Passoire Thermique (Classe ${dpeClasse})
+          </h4>
+          <p style="font-size:0.78rem; margin:0; line-height:1.4; color: var(--text);">
+            <strong>Interdictions de louer (Loi Climat) :</strong> Location interdite pour les logements G depuis 2025, F en <strong>2028</strong> et E en <strong>2034</strong>.
+          </p>
+          <div style="margin-top:0.75rem; border-top:1px solid rgba(239, 128, 35, 0.2); padding-top:0.6rem; display:flex; justify-content:space-between; align-items:center; font-size:0.78rem;">
+            <span>Est. budget travaux (moyen ~450€/m²) :</span>
+            <strong style="color:#ef8023; font-weight:700;">${fmt(body.surface * 450)}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; margin-top:0.25rem;">
+            <span>Budget total (Achat + Rénovation) :</span>
+            <strong style="color:var(--text); font-weight:700;">${fmt((prixDemande || est.prix_estime) + (body.surface * 450))}</strong>
+          </div>
+        </div>` : ""}
+
         <!-- Stats clés commune -->
         <div class="kpi-strip mt-2" style="grid-template-columns:repeat(3,1fr)">
-          <div class="kpi">
+          <div class="kpi" style="cursor:help;" title="Prix au m² médian calculé sur l'ensemble des transactions réelles dans cette commune.">
             <div class="kpi-val" style="font-size:1.2rem">${fmt(est.prix_m2_median)}</div>
-            <div class="kpi-lbl">Prix médian /m²</div>
+            <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Prix médian /m² ⓘ</div>
           </div>
-          <div class="kpi">
-            <div class="kpi-val" style="font-size:1.2rem">${resume?.revenu_median ? fmt(resume.revenu_median) : "—"}</div>
-            <div class="kpi-lbl">Revenu médian</div>
+          <div class="kpi" style="cursor:help;" title="Revenu disponible médian annuel par ménage (INSEE Filosofi) : 50% des ménages gagnent plus, 50% gagnent moins.">
+            <div class="kpi-val" style="font-size:1.2rem">${est.socio.revenu_median ? fmt(est.socio.revenu_median) : "—"}</div>
+            <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Revenu médian ⓘ</div>
           </div>
-          <div class="kpi">
-            <div class="kpi-val" style="font-size:1.2rem">${resume?.taux_chomage != null ? fmtPct(resume.taux_chomage) : "—"}</div>
-            <div class="kpi-lbl">Chômage</div>
+          <div class="kpi" style="cursor:help;" title="Taux de chômage au sens du recensement INSEE de la population active (15-64 ans) dans la commune.">
+            <div class="kpi-val" style="font-size:1.2rem">${est.socio.taux_chomage != null ? fmtPct(est.socio.taux_chomage) : "—"}</div>
+            <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Chômage ⓘ</div>
           </div>
         </div>
 
-        <a href="/commune?code=${hidCommune.value}" class="btn btn-outline btn-sm mt-2">
-          Analyse complète de ${resume?.nom_commune||"la commune"} →
-        </a>
+        <!-- Proximité & Transports -->
+        <div style="margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+          <div class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 0.6rem;">Services & Proximité</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;" title="Minimum observé sur les transactions réelles de la commune">
+              <span style="font-size: 1.5rem;">🚂</span>
+              <div>
+                <div style="font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 0.2rem;">
+                  Gare la plus proche
+                  <span style="font-size: 0.65rem; color: var(--muted); cursor: help;">ⓘ</span>
+                </div>
+                <strong style="font-size: 0.82rem;">${est.proximite.min_dist_gare_m != null ? fmtN(est.proximite.min_dist_gare_m) + ' m' : '—'}</strong>
+                <span style="display: block; font-size: 0.68rem; margin-top: 0.15rem; font-weight: 700; color: ${est.proximite.min_dist_gare_m < 500 ? '#16a34a' : est.proximite.min_dist_gare_m < 1500 ? '#d97706' : '#dc2626'}">
+                  ${est.proximite.min_dist_gare_m < 500 ? 'À pied (< 500m)' : est.proximite.min_dist_gare_m < 1500 ? 'À vélo (< 1.5km)' : 'Voiture (1.5km+)'}
+                </span>
+              </div>
+            </div>
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;" title="Minimum observé sur les transactions réelles de la commune">
+              <span style="font-size: 1.5rem;">🎓</span>
+              <div>
+                <div style="font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 0.2rem;">
+                  École la plus proche
+                  <span style="font-size: 0.65rem; color: var(--muted); cursor: help;">ⓘ</span>
+                </div>
+                <strong style="font-size: 0.82rem;">${est.proximite.min_dist_ecole_m != null ? fmtN(est.proximite.min_dist_ecole_m) + ' m' : '—'}</strong>
+                <span style="display: block; font-size: 0.68rem; margin-top: 0.15rem; font-weight: 700; color: ${est.proximite.min_dist_ecole_m < 500 ? '#16a34a' : est.proximite.min_dist_ecole_m < 1500 ? '#d97706' : '#dc2626'}">
+                  ${est.proximite.min_dist_ecole_m < 500 ? 'À pied (< 500m)' : est.proximite.min_dist_ecole_m < 1500 ? 'À vélo (< 1.5km)' : 'Voiture (1.5km+)'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; text-align: center; font-style: italic;">
+            * Distances minimales réelles mesurées à partir des biens vendus dans la commune.
+          </div>
+        </div>
+
+        <!-- Alerte Bruit -->
+        ${est.bruit.peb_pct > 0 ? `
+        <div class="alert alert-error" style="background: rgba(220, 38, 38, 0.06); border-left: 4px solid #dc2626; padding: 0.75rem; border-radius: var(--r); font-size: 0.78rem; display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; margin-bottom: 0;">
+          <span>🔇</span>
+          <span style="line-height: 1.4; color: var(--text);">
+            Exposition au bruit aérien de l'aéroport <strong>${est.bruit.peb_aeroports}</strong> (${est.bruit.peb_pct}% des transactions locales affectées).
+          </span>
+        </div>` : ""}
+
+        <div style="margin-top: 1.25rem;">
+          <a href="/commune?code=${hidCommune.value}" class="btn btn-outline btn-sm" style="display: block; text-align: center;">
+            Analyse complète de ${resume?.nom_commune || "la commune"} →
+          </a>
+        </div>
       </div>
 
       <!-- Colonne droite : analyse multi-dimensionnelle -->
@@ -318,9 +391,9 @@ function renderResult(data, body, dpeClasse, prixDemande){
             <div class="dim-icon">💰</div>
             <div class="dim-label">Prix</div>
             <div class="dim-value">${fmt(est.prix_m2_median)} /m² médian</div>
-            <div class="dim-detail">${prixDemande ? `Demandé : ${fmt(prixDemande/body.surface)} /m²` : `Surface : ${body.surface} m² → ${fmt(est.prix_estime)}`}</div>
-            <div class="dim-score ${score==="excellent"||score==="bon"?"good":score==="correct"?"ok":"bad"}">
-              ${score==="excellent"?"A":score==="bon"?"B":score==="correct"?"C":"D"}
+            <div class="dim-detail">${prixDemande ? `Demandé : ${fmt(prixDemande / body.surface)} /m²` : `Surface : ${body.surface} m² → ${fmt(est.prix_estime)}`}</div>
+            <div class="dim-score ${score === "excellent" || score === "bon" ? "good" : score === "correct" ? "ok" : "bad"}">
+              ${score === "excellent" ? "A" : score === "bon" ? "B" : score === "correct" ? "C" : "D"}
             </div>
           </div>
 
@@ -330,19 +403,19 @@ function renderResult(data, body, dpeClasse, prixDemande){
             <div class="dim-label">Énergie (DPE)</div>
             <div class="dim-value">${dpeClasse ? `Classe ${dpeClasse} déclarée` : dpe.length ? `${dpe.length} classes analysées` : "Données insuffisantes"}</div>
             <div class="dim-detail">${dpeInsight || (dpe.length ? "Impact énergie disponible — voir fiche commune" : "DPE non disponible pour cette commune")}</div>
-            <div class="dim-score ${dpeClasse?(['A','B','C'].includes(dpeClasse)?'good':['D','E'].includes(dpeClasse)?'ok':'bad'):'na'}">
-              ${dpeClasse||"?"}
+            <div class="dim-score ${dpeClasse ? (['A', 'B', 'C'].includes(dpeClasse) ? 'good' : ['D', 'E'].includes(dpeClasse) ? 'ok' : 'bad') : 'na'}">
+              ${dpeClasse || "?"}
             </div>
           </div>
 
           <!-- Transport -->
           <div class="dim-card" style="--dim-color:#7c3aed">
             <div class="dim-icon">🚂</div>
-            <div class="dim-label">Transport</div>
-            <div class="dim-value">${transport.length ? transport[0].tranche_distance+" de la gare" : "Non disponible"}</div>
-            <div class="dim-detail">${transportInsight||"Voir fiche commune pour l'analyse transport"}</div>
-            <div class="dim-score ${transport.length?( transport[0].tranche_distance==="0-500m"?"good":transport[0].tranche_distance==="500m-1km"?"ok":"na"):"na"}">
-              ${transport.length?(transport[0].tranche_distance==="0-500m"?"A":transport[0].tranche_distance==="500m-1km"?"B":"C"):"?"}
+            <div class="dim-label">Transport & Écoles</div>
+            <div class="dim-value">Min : ${est.proximite.min_dist_gare_m != null ? fmtN(est.proximite.min_dist_gare_m) + ' m (Gare)' : 'Non dispo'}</div>
+            <div class="dim-detail">Moy. Gare : ${est.proximite.avg_dist_gare_m != null ? fmtN(est.proximite.avg_dist_gare_m) + ' m' : '—'} · École : ${est.proximite.min_dist_ecole_m != null ? fmtN(est.proximite.min_dist_ecole_m) + ' m' : '—'}</div>
+            <div class="dim-score ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "good" : est.proximite.min_dist_gare_m < 1500 ? "ok" : "bad") : "na"}">
+              ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "A" : est.proximite.min_dist_gare_m < 1500 ? "B" : "C") : "?"}
             </div>
           </div>
 
@@ -350,21 +423,21 @@ function renderResult(data, body, dpeClasse, prixDemande){
           <div class="dim-card" style="--dim-color:#0d9488">
             <div class="dim-icon">🏘️</div>
             <div class="dim-label">Contexte socio-économique</div>
-            <div class="dim-value">${resume?.revenu_median ? fmt(resume.revenu_median)+"/an" : "Données manquantes"}</div>
-            <div class="dim-detail">${resume?.taux_chomage!=null?`Chômage : ${fmtPct(resume.taux_chomage)} · `:""}${resume?.population?fmtN(resume.population)+" hab.":""}</div>
-            <div class="dim-score ${resume?.revenu_median?(parseFloat(resume.revenu_median)>25000?"good":parseFloat(resume.revenu_median)>18000?"ok":"bad"):"na"}">
-              ${resume?.revenu_median?(parseFloat(resume.revenu_median)>25000?"A":parseFloat(resume.revenu_median)>18000?"B":"C"):"?"}
+            <div class="dim-value">${est.socio.revenu_median ? fmt(est.socio.revenu_median) + "/an" : "Données manquantes"}</div>
+            <div class="dim-detail">${est.socio.taux_chomage != null ? `Chômage : ${fmtPct(est.socio.taux_chomage)} · ` : ""}${est.socio.population ? fmtN(est.socio.population) + " hab." : ""}</div>
+            <div class="dim-score ${est.socio.revenu_median ? (est.socio.revenu_median > 25000 ? "good" : est.socio.revenu_median > 18000 ? "ok" : "bad") : "na"}">
+              ${est.socio.revenu_median ? (est.socio.revenu_median > 25000 ? "A" : est.socio.revenu_median > 18000 ? "B" : "C") : "?"}
             </div>
           </div>
 
           <!-- Tendance marché -->
-          <div class="dim-card" style="--dim-color:${tendancePct>0?"#d97706":"#16a34a"}">
+          <div class="dim-card" style="--dim-color:${tendancePct > 0 ? "#d97706" : "#16a34a"}">
             <div class="dim-icon">📈</div>
             <div class="dim-label">Tendance marché</div>
-            <div class="dim-value">${tendancePct!=null?`${tendancePct>0?"+":""}${tendancePct}% sur 2 ans`:"Données insuffisantes"}</div>
-            <div class="dim-detail">${tendances.length?`${fmtN(tendances.reduce((s,t)=>s+(t.nb_transactions||0),0))} transactions analysées`:"Historique en cours de chargement"}</div>
-            <div class="dim-score ${tendancePct!=null?(parseFloat(tendancePct)>5?"ok":parseFloat(tendancePct)<-3?"good":"ok"):"na"}">
-              ${tendancePct!=null?(parseFloat(tendancePct)>0?"↑":"↓"):"?"}
+            <div class="dim-value">${tendancePct != null ? `${tendancePct > 0 ? "+" : ""}${tendancePct}% sur 2 ans` : "Données insuffisantes"}</div>
+            <div class="dim-detail">${tendances.length ? `${fmtN(tendances.reduce((s, t) => s + (t.nb_transactions || 0), 0))} transactions analysées` : "Historique en cours de chargement"}</div>
+            <div class="dim-score ${tendancePct != null ? (parseFloat(tendancePct) > 5 ? "ok" : parseFloat(tendancePct) < -3 ? "good" : "ok") : "na"}">
+              ${tendancePct != null ? (parseFloat(tendancePct) > 0 ? "↑" : "↓") : "?"}
             </div>
           </div>
         </div>
@@ -375,53 +448,57 @@ function renderResult(data, body, dpeClasse, prixDemande){
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Évolution du prix médian</div>
-        ${tendances.length>=3?`<div style="position:relative;height:320px"><canvas id="chart-tend"></canvas></div>`:`<div class="alert alert-info">Pas assez d'historique pour cette commune.</div>`}
+        ${tendances.length >= 3 ? `<div style="position:relative;height:320px"><canvas id="chart-tend"></canvas></div>` : `<div class="alert alert-info">Pas assez d'historique pour cette commune.</div>`}
       </div>
       <div class="card">
         <div class="card-title">Transactions récentes comparables</div>
-        ${txList.length?`
+        ${txList.length ? `
         <div class="tx-list" id="tx-list">
-          ${txList.slice(0,6).map(t=>`
+          ${txList.slice(0, 6).map(t => `
           <div class="tx-item">
-            <div class="tx-type" style="font-size:.8rem">${t.type_local==="Appartement"?"🏢 Appt":"🏠 Maison"}</div>
-            <div class="tx-address">${t.adresse||"Adresse non disponible"}</div>
+            <div class="tx-type" style="font-size:.8rem">${t.type_local === "Appartement" ? "🏢 Appt" : "🏠 Maison"}</div>
+            <div class="tx-address">${t.adresse || "Adresse non disponible"}</div>
             <div class="tx-price">${fmt(t.valeur_fonciere)}</div>
-            <div class="tx-m2" style="color:var(--muted)">${t.prix_m2?fmtN(t.prix_m2)+" €/m²":""}</div>
-            ${t.dpe_classe?`<div class="tx-dpe dpe-${t.dpe_classe}">${t.dpe_classe}</div>`:`<div style="width:22px"></div>`}
+            <div class="tx-m2" style="color:var(--muted)">${t.prix_m2 ? fmtN(t.prix_m2) + " €/m²" : ""}</div>
+            ${t.dpe_classe ? `<div class="tx-dpe dpe-${t.dpe_classe}">${t.dpe_classe}</div>` : `<div style="width:22px"></div>`}
           </div>`).join("")}
-        </div>`:`<div class="alert alert-info">Aucune transaction récente disponible.</div>`}
+        </div>`: `<div class="alert alert-info">Aucune transaction récente disponible.</div>`}
       </div>
     </div>
   `;
 
-  // Chart tendances
-  if(tendances.length>=3){
-    setTimeout(()=>{
-      destroyChart("chart-tend");
-      const ctx = D("chart-tend").getContext("2d");
-      charts["chart-tend"] = new Chart(ctx,{
-        type:"line",
-        data:{
-          labels: tendances.map(t=>t.trimestre),
-          datasets:[{
-            label:"Prix médian /m²",
-            data: tendances.map(t=>t.prix_m2_median),
-            borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",
-            fill:true,tension:.3,pointRadius:4,pointHoverRadius:6,
-          }]
-        },
-        options:{
-          plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y).toLocaleString("fr-FR")+" €/m²"}}},
-          scales:{y:{
-            min:(()=>{const v=tendances.map(t=>t.prix_m2_median).filter(Boolean);const mn=Math.min(...v),mx=Math.max(...v);const p=(mx-mn)*0.15||mn*0.1;return Math.floor((mn-p)/100)*100})(),
-            max:(()=>{const v=tendances.map(t=>t.prix_m2_median).filter(Boolean);const mn=Math.min(...v),mx=Math.max(...v);const p=(mx-mn)*0.15||mn*0.1;return Math.ceil((mx+p)/100)*100})(),
-            ticks:{callback:v=>v.toLocaleString("fr-FR")+" €",maxTicksLimit:8},grid:{color:"#f0f0f0"}}},
-          responsive:true,maintainAspectRatio:false,
-        }
-      });
-    },50);
-  }
-}
-</script>
+      // Chart tendances
+      if (tendances.length >= 3) {
+        setTimeout(() => {
+          destroyChart("chart-tend");
+          const ctx = D("chart-tend").getContext("2d");
+          charts["chart-tend"] = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: tendances.map(t => t.trimestre),
+              datasets: [{
+                label: "Prix médian /m²",
+                data: tendances.map(t => t.prix_m2_median),
+                borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.08)",
+                fill: true, tension: .3, pointRadius: 4, pointHoverRadius: 6,
+              }]
+            },
+            options: {
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => Math.round(ctx.parsed.y).toLocaleString("fr-FR") + " €/m²" } } },
+              scales: {
+                y: {
+                  min: (() => { const v = tendances.map(t => t.prix_m2_median).filter(Boolean); const mn = Math.min(...v), mx = Math.max(...v); const p = (mx - mn) * 0.15 || mn * 0.1; return Math.floor((mn - p) / 100) * 100 })(),
+                  max: (() => { const v = tendances.map(t => t.prix_m2_median).filter(Boolean); const mn = Math.min(...v), mx = Math.max(...v); const p = (mx - mn) * 0.15 || mn * 0.1; return Math.ceil((mx + p) / 100) * 100 })(),
+                  ticks: { callback: v => v.toLocaleString("fr-FR") + " €", maxTicksLimit: 8 }, grid: { color: "#f0f0f0" }
+                }
+              },
+              responsive: true, maintainAspectRatio: false,
+            }
+          });
+        }, 50);
+      }
+    }
+  </script>
 </body>
+
 </html>

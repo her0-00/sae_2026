@@ -7,7 +7,7 @@ import json, logging, sys
 from pathlib import Path
 import requests
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.config import DEPARTEMENTS
+from scripts import config
 from scripts._db import get_conn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%H:%M:%S")
@@ -52,10 +52,10 @@ def charger_dept(dept: str, conn):
 
 
 def main():
-    log.info("COMMUNES — %d départements", len(DEPARTEMENTS))
+    log.info("COMMUNES — %d départements", len(config.DEPARTEMENTS))
     conn = get_conn()
     total = 0
-    for dept in DEPARTEMENTS:
+    for dept in config.DEPARTEMENTS:
         try:
             total += charger_dept(dept, conn)
         except Exception as e:

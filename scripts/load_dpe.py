@@ -8,7 +8,7 @@ from pathlib import Path
 import psycopg2.extras
 import requests
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.config import DEPARTEMENTS
+from scripts import config
 from scripts._db import get_conn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%H:%M:%S")
@@ -150,10 +150,23 @@ def charger_dpe(dept: str, conn) -> int:
 
 
 def main():
-    log.info("DPE — %d départements", len(DEPARTEMENTS))
+    log.info("DPE — %d départements", len(config.DEPARTEMENTS))
     conn = get_conn()
     total = 0
-    for dept in DEPARTEMENTS:
+    
+    # Sécurité Idempotence
+    for dept in config.DEPARTEMENTS:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM dpe WHERE commune_code LIKE %s LIMIT 1", (dept + '%',))
+            if cur.fetchone() is not None:
+                if getattr(config, 'FORCE_OVERWRITE', False):
+                    log.warning("Suppression des anciens DPE pour %s...", dept)
+                    cur.execute("DELETE FROM dpe WHERE commune_code LIKE %s", (dept + '%',))
+                    conn.commit()
+                else:
+                    raise Exception(f"Les DPE pour le département {dept} existent déjà. Activez 'force_overwrite' dans Dagster pour les écraser.")
+                    
+    for dept in config.DEPARTEMENTS:
         try:
             total += charger_dpe(dept, conn)
         except Exception as e:

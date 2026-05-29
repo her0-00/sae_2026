@@ -106,3 +106,74 @@ def analyse_tendances():
         (commune_code, type_local),
     )
     return jsonify([dict(r) for r in rows])
+
+
+@bp.get("/ecole")
+@cache.cached(timeout=600, query_string=True)
+def analyse_ecole():
+    commune_code = request.args.get("commune_code")
+    type_local = request.args.get("type", "Appartement")
+    if not commune_code:
+        abort(422)
+
+    rows = query(
+        """
+        WITH raw_tranches AS (
+            SELECT
+                CASE
+                    WHEN dist_ecole_m <=  500 THEN '0-500m'
+                    WHEN dist_ecole_m <= 1000 THEN '500m-1km'
+                    WHEN dist_ecole_m <= 2000 THEN '1-2km'
+                    WHEN dist_ecole_m <= 5000 THEN '2-5km'
+                    ELSE '>5km'
+                END AS tranche_distance,
+                prix_m2
+            FROM transactions
+            WHERE commune_code = %s
+              AND type_local   = %s
+              AND est_valide   = TRUE
+              AND dist_ecole_m IS NOT NULL
+              AND prix_m2 IS NOT NULL
+        )
+        SELECT
+            tranche_distance,
+            COUNT(*) AS nb_transactions,
+            ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (
+                ORDER BY prix_m2)::NUMERIC, 0) AS prix_m2_median
+        FROM raw_tranches
+        GROUP BY tranche_distance
+        ORDER BY
+            CASE tranche_distance
+                WHEN '0-500m'   THEN 1
+                WHEN '500m-1km' THEN 2
+                WHEN '1-2km'    THEN 3
+                WHEN '2-5km'    THEN 4
+                ELSE 5
+            END
+        """,
+        (commune_code, type_local),
+    )
+    return jsonify([dict(r) for r in rows])
+
+
+@bp.get("/pois")
+@cache.cached(timeout=600, query_string=True)
+def liste_pois():
+    commune_code = request.args.get("commune_code")
+    if not commune_code:
+        abort(422)
+
+    rows = query(
+        """
+        SELECT p.type, p.nom, p.latitude, p.longitude,
+               ROUND(ST_Distance(p.geom::geography, ST_Centroid(c.geom)::geography))::integer as dist_centroid_m
+        FROM points_interet p
+        JOIN communes_stats c ON ST_Within(p.geom, c.geom)
+        WHERE c.commune_code = %s
+        ORDER BY p.type, dist_centroid_m
+        LIMIT 100
+        """,
+        (commune_code,),
+    )
+    return jsonify([dict(r) for r in rows])
+

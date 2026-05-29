@@ -1,211 +1,575 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Carte des prix — ImmoBI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    body{overflow:hidden}
-    .map-layout{height:calc(100vh - 58px)}
-    .map-sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1rem;width:300px;flex-shrink:0}
-    #map{flex:1}
-    .sidebar-section{border-top:1px solid var(--border);padding-top:.75rem;margin-top:.25rem}
-    .commune-popup .popup-name{font-weight:700;font-size:1rem;margin-bottom:.25rem}
-    .commune-popup .popup-price{font-size:1.4rem;font-weight:800;color:var(--primary)}
-    .commune-popup .popup-meta{font-size:.78rem;color:var(--muted);margin:.2rem 0 .5rem}
-    .legend{background:#fff;padding:.75rem 1rem;border-radius:var(--r);box-shadow:var(--sh);font-size:.78rem}
-    .legend h4{font-weight:700;margin-bottom:.4rem;font-size:.82rem}
-    .legend-item{display:flex;align-items:center;gap:.5rem;margin:.2rem 0}
-    .legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
-    .stat-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;background:var(--bg);border:1px solid var(--border);border-radius:99px;font-size:.75rem;margin:.15rem}
-    #info-panel{background:var(--bg);border-radius:var(--r);padding:1rem;min-height:80px}
-    .loading-bar{height:3px;background:linear-gradient(90deg,var(--primary),#60a5fa,var(--primary));background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:99px}
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    @media(max-width:768px){.map-layout{flex-direction:column}.map-sidebar{width:100%;max-height:40vh;order:2}#map{order:1;height:55vh}}
+    body {
+      overflow: hidden
+    }
+
+    .map-layout {
+      height: calc(100vh - 58px)
+    }
+
+    .map-sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 300px;
+      flex-shrink: 0
+    }
+
+    #map {
+      flex: 1
+    }
+
+    .sidebar-section {
+      border-top: 1px solid var(--border);
+      padding-top: .75rem;
+      margin-top: .25rem
+    }
+
+    .commune-popup .popup-name {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: .25rem
+    }
+
+    .commune-popup .popup-price {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary)
+    }
+
+    .commune-popup .popup-meta {
+      font-size: .78rem;
+      color: var(--muted);
+      margin: .2rem 0 .5rem
+    }
+
+    .legend {
+      background: #fff;
+      padding: .75rem 1rem;
+      border-radius: var(--r);
+      box-shadow: var(--sh);
+      font-size: .78rem
+    }
+
+    .legend h4 {
+      font-weight: 700;
+      margin-bottom: .4rem;
+      font-size: .82rem
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin: .2rem 0
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .2rem .6rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      font-size: .75rem;
+      margin: .15rem
+    }
+
+    #info-panel {
+      background: var(--bg);
+      border-radius: var(--r);
+      padding: 1rem;
+      min-height: 80px
+    }
+
+    .loading-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), #60a5fa, var(--primary));
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 99px
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0
+      }
+
+      100% {
+        background-position: -200% 0
+      }
+    }
+
+    @media(max-width:768px) {
+      .map-layout {
+        flex-direction: column
+      }
+
+      .map-sidebar {
+        width: 100%;
+        max-height: 40vh;
+        order: 2
+      }
+
+      #map {
+        order: 1;
+        height: 55vh
+      }
+    }
+
+    .price-marker {
+      background: #dc2626;
+      color: white;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 2px 6px;
+      border-radius: 12px;
+      border: 1.5px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      white-space: nowrap;
+      text-align: center;
+      transition: transform 0.1s;
+    }
+    .price-marker:hover {
+      background: #b91c1c;
+      z-index: 1000 !important;
+      transform: scale(1.1);
+    }
+    .tx-popup {
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    .tx-popup strong { color: #dc2626; font-size: 1.1rem; }
   </style>
 </head>
+
 <body>
-<nav>
-  <div class="nav-inner">
-    <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
-    <ul class="nav-links">
-      <li><a href="/">Analyser</a></li>
-      <li><a href="/carte" class="active">Carte des prix</a></li>
-      <li><a href="/commune">Fiche commune</a></li>
-      <li><a href="/opportunites">Opportunités</a></li>
-    </ul>
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
+      <ul class="nav-links">
+        <li><a href="/">Analyser</a></li>
+        <li><a href="/carte" class="active">Carte des prix</a></li>
+        <li><a href="/commune">Fiche commune</a></li>
+        <li><a href="/opportunites">Opportunités</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="map-layout" style="display:flex">
+    <aside class="map-sidebar">
+      <div>
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:.75rem">Filtres</div>
+        <div class="form-group" style="margin-bottom:.6rem">
+          <label>Type de bien</label>
+          <select id="f-type">
+            <option value="Appartement">Appartement</option>
+            <option value="Maison">Maison</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:.6rem">
+          <label>Métrique d'affichage</label>
+          <select id="f-metric">
+            <option value="prix">💰 Prix médian (€/m²)</option>
+            <option value="revenu">👥 Revenu médian (€/an)</option>
+            <option value="chomage">👔 Taux de chômage (%)</option>
+            <option value="dpe">⚡ Qualité énergétique DPE</option>
+            <option value="bruit">🔇 Niveau de Bruit (PEB %)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:.6rem">
+          <label>Département</label>
+          <input id="f-dept" type="text" placeholder="ex: 44, 56…" maxlength="3">
+        </div>
+        <div class="form-group" style="margin-bottom:.75rem">
+          <label>Année</label>
+          <select id="f-annee">
+            <option value="">Dernière disponible</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btn-load" style="width:100%">Charger la carte</button>
+      </div>
+
+      <div class="sidebar-section">
+        <div id="info-panel" class="text-muted text-sm">
+          Cliquez sur une commune pour voir ses statistiques.
+        </div>
+      </div>
+
+      <div class="sidebar-section" id="legend-wrap" style="display:none">
+        <div class="legend">
+          <!-- Rempli dynamiquement en JS -->
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div style="font-size:.75rem;color:var(--muted)">
+          Sources : DVF data.gouv.fr · INSEE Filosofi · ADEME<br>
+          Données géospatiales de contour IGN
+        </div>
+      </div>
+    </aside>
+
+    <div id="map"></div>
   </div>
-</nav>
 
-<div class="map-layout" style="display:flex">
-  <aside class="map-sidebar">
-    <div>
-      <div style="font-weight:700;font-size:.95rem;margin-bottom:.75rem">Filtres</div>
-      <div class="form-group" style="margin-bottom:.6rem">
-        <label>Type de bien</label>
-        <select id="f-type">
-          <option value="Appartement">Appartement</option>
-          <option value="Maison">Maison</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:.6rem">
-        <label>Département</label>
-        <input id="f-dept" type="text" placeholder="ex: 69, 35…" maxlength="3">
-      </div>
-      <div class="form-group" style="margin-bottom:.75rem">
-        <label>Année</label>
-        <select id="f-annee">
-          <option value="">Dernière disponible</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-          <option value="2022">2022</option>
-          <option value="2021">2021</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" id="btn-load" style="width:100%">Charger la carte</button>
-    </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const API = "";
+    let geojsonLayer = null;
+    let highlightedLayer = null;
+    let isSatellite = false;
+    let txLayer = null;
 
-    <div class="sidebar-section">
-      <div id="info-panel" class="text-muted text-sm">
-        Cliquez sur une commune pour voir ses statistiques.
-      </div>
-    </div>
+    const map = L.map("map", { zoomControl: false }).setView([47.2, 2.5], 6);
+    L.control.zoom({ position: "topright" }).addTo(map);
+    
+    txLayer = L.layerGroup().addTo(map);
 
-    <div class="sidebar-section" id="legend-wrap" style="display:none">
-      <div class="legend">
-        <h4>Prix médian /m²</h4>
-        <div class="legend-item"><div class="legend-swatch" style="background:#dbeafe"></div>&lt; 1 500 €</div>
-        <div class="legend-item"><div class="legend-swatch" style="background:#93c5fd"></div>1 500 – 2 500 €</div>
-        <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div>2 500 – 4 000 €</div>
-        <div class="legend-item"><div class="legend-swatch" style="background:#1d4ed8"></div>4 000 – 6 000 €</div>
-        <div class="legend-item"><div class="legend-swatch" style="background:#1e1b4b"></div>&gt; 6 000 €</div>
-      </div>
-    </div>
+    const tileNormal = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+    });
+    const tileSatellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: '© Esri © DigitalGlobe', maxZoom: 19
+    });
+    tileNormal.addTo(map);
+    L.control.layers({ "🗺️ Plan": tileNormal, "🛰️ Satellite": tileSatellite }, {}, { position: "topright" }).addTo(map);
 
-    <div class="sidebar-section">
-      <div style="font-size:.75rem;color:var(--muted)">
-        Sources : DVF data.gouv.fr · INSEE Filosofi<br>
-        Transactions : Appartements et Maisons
-      </div>
-    </div>
-  </aside>
+    map.on("baselayerchange", e => {
+      isSatellite = e.name.includes("Satellite");
+      if (geojsonLayer) geojsonLayer.setStyle(f => layerStyle(f));
+    });
 
-  <div id="map"></div>
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const API = "";
-let geojsonLayer = null;
-let highlightedLayer = null;
-let isSatellite = false;
-
-const map = L.map("map",{zoomControl:false}).setView([47.2,2.5],6);
-L.control.zoom({position:"topright"}).addTo(map);
-
-const tileNormal = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
-  attribution:'© OpenStreetMap © CARTO',maxZoom:19
-});
-const tileSatellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
-  attribution:'© Esri © DigitalGlobe',maxZoom:19
-});
-tileNormal.addTo(map);
-L.control.layers({"🗺️ Plan":tileNormal,"🛰️ Satellite":tileSatellite},{},{position:"topright"}).addTo(map);
-
-map.on("baselayerchange", e => {
-  isSatellite = e.name.includes("Satellite");
-  if(geojsonLayer) geojsonLayer.setStyle(f => layerStyle(f));
-});
-
-function priceColor(prix){
-  if(!prix||prix<100)return"#e2e8f0";
-  if(prix<1500)return"#dbeafe";
-  if(prix<2500)return"#93c5fd";
-  if(prix<4000)return"#3b82f6";
-  if(prix<6000)return"#1d4ed8";
-  return"#1e1b4b";
-}
-
-function layerStyle(f){
-  const prix = f.properties.prix_m2_median;
-  if(isSatellite) return{fillColor:priceColor(prix),fillOpacity:.15,color:priceColor(prix),weight:1.5};
-  return{fillColor:priceColor(prix),fillOpacity:.75,color:"#fff",weight:.8};
-}
-
-function fmt(n){return n==null?"—":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n)}
-function fmtN(n){return n==null?"—":new Intl.NumberFormat("fr-FR").format(n)}
-
-async function chargerCarte(){
-  const type  = document.getElementById("f-type").value;
-  const dept  = document.getElementById("f-dept").value.trim();
-  const annee = document.getElementById("f-annee").value;
-  const panel = document.getElementById("info-panel");
-  panel.innerHTML=`<div class="loading-bar" style="margin-bottom:.5rem"></div><div style="font-size:.8rem;color:var(--muted)">Chargement…</div>`;
-
-  const params = new URLSearchParams({type});
-  if(dept)  params.set("departement",dept);
-  if(annee) params.set("annee",annee);
-
-  try{
-    const res = await fetch(API+"/api/carte/prix-m2?"+params);
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    const geojson = await res.json();
-    if(geojsonLayer)map.removeLayer(geojsonLayer);
-
-    geojsonLayer = L.geoJSON(geojson,{
-      style(f){ return layerStyle(f); },
-      onEachFeature(f,layer){
-        const p=f.properties;
-        layer.on({
-          mouseover(e){
-            e.target.setStyle({fillOpacity:1,weight:1.5,color:"#1d4ed8"});
-            updateInfoPanel(p);
-          },
-          mouseout(e){
-            if(highlightedLayer!==e.target){
-              geojsonLayer.resetStyle(e.target);
-              if(highlightedLayer) updateInfoPanel(highlightedLayer.feature.properties,true);
-              else panel.innerHTML=`<span class="text-muted text-sm">Survolez ou cliquez une commune.</span>`;
-            }
-          },
-          click(e){
-            if(highlightedLayer&&highlightedLayer!==e.target)geojsonLayer.resetStyle(highlightedLayer);
-            highlightedLayer=e.target;
-            e.target.setStyle({fillOpacity:1,weight:2,color:"#2563eb"});
-            updateInfoPanel(p,true);
-          }
-        });
+    function metricColor(val, metric) {
+      if (val === null || val === undefined) return "#e2e8f0";
+      if (metric === "prix") {
+        if (val < 1500) return "#dbeafe";
+        if (val < 2500) return "#93c5fd";
+        if (val < 4000) return "#3b82f6";
+        if (val < 6000) return "#1d4ed8";
+        return "#1e1b4b";
+      } else if (metric === "revenu") {
+        if (val < 20000) return "#fee2e2";
+        if (val < 24000) return "#fef08a";
+        if (val < 28000) return "#a7f3d0";
+        if (val < 32000) return "#34d399";
+        return "#065f46";
+      } else if (metric === "chomage") {
+        if (val < 5.0) return "#d1fae5";
+        if (val < 7.5) return "#a7f3d0";
+        if (val < 10.0) return "#fef08a";
+        if (val < 12.5) return "#fed7aa";
+        return "#fee2e2";
+      } else if (metric === "dpe") {
+        if (val <= 2.5) return "#00843d";
+        if (val <= 3.5) return "#a4c437";
+        if (val <= 4.5) return "#f7d11e";
+        if (val <= 5.5) return "#ef8023";
+        return "#e3001b";
+      } else if (metric === "bruit") {
+        if (val === 0) return "#22c55e";
+        if (val < 2.0) return "#fbbf24";
+        if (val < 5.0) return "#f97316";
+        return "#dc2626";
       }
-    }).addTo(map);
+      return "#e2e8f0";
+    }
 
-    if(geojsonLayer.getBounds().isValid())map.fitBounds(geojsonLayer.getBounds(),{padding:[20,20]});
-    const n=geojson.features.length;
-    panel.innerHTML=`<span style="font-size:.82rem;color:var(--muted)">${fmtN(n)} commune${n>1?"s":""} affichée${n>1?"s":""}. Cliquez pour détails.</span>`;
-    document.getElementById("legend-wrap").style.display="block";
-  }catch(e){
-    panel.innerHTML=`<div class="alert alert-error" style="font-size:.8rem">${e.message}</div>`;
-  }
-}
+    function layerStyle(f) {
+      const metric = document.getElementById("f-metric").value;
+      const val = f.properties.metric_value;
+      const color = metricColor(val, metric);
+      if (isSatellite) return { fillColor: color, fillOpacity: .15, color: color, weight: 1.5 };
+      return { fillColor: color, fillOpacity: .75, color: "#fff", weight: .8 };
+    }
 
-function updateInfoPanel(p,withLink=false){
-  const panel=document.getElementById("info-panel");
-  panel.innerHTML=`
+    function fmt(n) { return n == null ? "—" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n) }
+    function fmtN(n) { return n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n) }
+    function fmtP(n) { return n == null ? "—" : parseFloat(n).toFixed(1) + " %" }
+
+    function updateLegendUI(metric) {
+      const legendWrap = document.getElementById("legend-wrap");
+      const legend = legendWrap.querySelector(".legend");
+      legendWrap.style.display = "block";
+      
+      let html = "";
+      if (metric === "prix") {
+        html = `
+          <h4>Prix médian /m²</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#dbeafe"></div>&lt; 1 500 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#93c5fd"></div>1 500 – 2 500 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#3b82f6"></div>2 500 – 4 000 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#1d4ed8"></div>4 000 – 6 000 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#1e1b4b"></div>&gt; 6 000 €</div>
+        `;
+      } else if (metric === "revenu") {
+        html = `
+          <h4>Revenu médian annuel</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fee2e2"></div>&lt; 20 000 €/an</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fef08a"></div>20 000 – 24 000 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#a7f3d0"></div>24 000 – 28 000 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#34d399"></div>28 000 – 32 000 €</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#065f46"></div>&gt; 32 000 €/an</div>
+        `;
+      } else if (metric === "chomage") {
+        html = `
+          <h4>Taux de chômage</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#d1fae5"></div>&lt; 5.0 %</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#a7f3d0"></div>5.0 % – 7.5 %</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fef08a"></div>7.5 % – 10.0 %</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fed7aa"></div>10.0 % – 12.5 %</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fee2e2"></div>&gt; 12.5 %</div>
+        `;
+      } else if (metric === "dpe") {
+        html = `
+          <h4>Qualité énergétique DPE</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#00843d"></div>A - B (Excellent)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#a4c437"></div>C (Très bon)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#f7d11e"></div>D (Moyen)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#ef8023"></div>E (Énergivore)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#e3001b"></div>F - G (Passoire)</div>
+        `;
+      } else if (metric === "bruit") {
+        html = `
+          <h4>Exposition Bruit Aéroport</h4>
+          <div class="legend-item"><div class="legend-swatch" style="background:#22c55e"></div>0% (Aucun impact)</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#fbbf24"></div>&lt; 2.0 % des transactions</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#f97316"></div>2.0 % – 5.0 %</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:#dc2626"></div>&gt; 5.0 % des transactions</div>
+        `;
+      }
+      legend.innerHTML = html;
+    }
+
+    async function chargerCarte() {
+      const type = document.getElementById("f-type").value;
+      const dept = document.getElementById("f-dept").value.trim();
+      const annee = document.getElementById("f-annee").value;
+      const metric = document.getElementById("f-metric").value;
+      const panel = document.getElementById("info-panel");
+      panel.innerHTML = `<div class="loading-bar" style="margin-bottom:.5rem"></div><div style="font-size:.8rem;color:var(--muted)">Chargement de la métrique…</div>`;
+
+      const params = new URLSearchParams({ type, metric });
+      if (dept) params.set("departement", dept);
+      if (annee) params.set("annee", annee);
+
+      try {
+        if (txLayer) txLayer.clearLayers();
+        const res = await fetch(API + "/api/carte/prix-m2?" + params);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const geojson = await res.json();
+        if (geojsonLayer) map.removeLayer(geojsonLayer);
+
+        geojsonLayer = L.geoJSON(geojson, {
+          style(f) { return layerStyle(f); },
+          onEachFeature(f, layer) {
+            const p = f.properties;
+            layer.on({
+              mouseover(e) {
+                if (isSatellite) {
+                  e.target.setStyle({ fillOpacity: .45, weight: 2, color: "#fff" });
+                } else {
+                  e.target.setStyle({ fillOpacity: 1, weight: 1.5, color: "#1d4ed8" });
+                }
+                updateInfoPanel(p);
+              },
+              mouseout(e) {
+                if (highlightedLayer !== e.target) {
+                  geojsonLayer.resetStyle(e.target);
+                  if (highlightedLayer) updateInfoPanel(highlightedLayer.feature.properties, true);
+                  else panel.innerHTML = `<span class="text-muted text-sm">Survolez ou cliquez une commune.</span>`;
+                }
+              },
+              click(e) {
+                if (highlightedLayer && highlightedLayer !== e.target) geojsonLayer.resetStyle(highlightedLayer);
+                highlightedLayer = e.target;
+                if (isSatellite) {
+                  e.target.setStyle({ fillOpacity: .5, weight: 2.5, color: "#fff" });
+                } else {
+                  e.target.setStyle({ fillOpacity: 1, weight: 2, color: "#2563eb" });
+                }
+                updateInfoPanel(p, true);
+              }
+            });
+          }
+        }).addTo(map);
+
+        if (geojsonLayer.getBounds().isValid()) map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
+        const n = geojson.features.length;
+        panel.innerHTML = `<span style="font-size:.82rem;color:var(--muted)">${fmtN(n)} commune${n > 1 ? "s" : ""} affichée${n > 1 ? "s" : ""}. Métrique : ${document.getElementById("f-metric").selectedOptions[0].text}</span>`;
+        updateLegendUI(metric);
+      } catch (e) {
+        panel.innerHTML = `<div class="alert alert-error" style="font-size:.8rem">${e.message}</div>`;
+      }
+    }
+
+    function updateInfoPanel(p, withLink = false) {
+      const panel = document.getElementById("info-panel");
+      const metric = document.getElementById("f-metric").value;
+      
+      let metricHtml = "";
+      if (metric === "prix") {
+        metricHtml = `<div class="popup-price">${p.prix_m2_median ? fmtN(p.prix_m2_median) + " €/m²" : "Données insuffisantes"}</div>`;
+      } else if (metric === "revenu") {
+        metricHtml = `<div class="popup-price" style="color:#0d9488;">${p.revenu_median ? fmt(p.revenu_median) + "/an" : "Non disponible"}</div>`;
+      } else if (metric === "chomage") {
+        metricHtml = `<div class="popup-price" style="color:#ef8023;">${p.taux_chomage != null ? fmtP(p.taux_chomage) : "Non disponible"}</div>`;
+      } else if (metric === "dpe") {
+        const classes = ["?", "A", "B", "C", "D", "E", "F", "G"];
+        const dpeStr = p.avg_dpe ? 'Moy. Classe ' + classes[Math.round(p.avg_dpe)] + ' (' + p.avg_dpe + ')' : 'Non disponible';
+        metricHtml = `<div class="popup-price" style="color:#16a34a; font-size:1.1rem;">${dpeStr}</div>`;
+      } else if (metric === "bruit") {
+        metricHtml = `<div class="popup-price" style="color:#dc2626; font-size:1.1rem;">${p.pct_bruit != null ? p.pct_bruit.toFixed(1) + '% biens en PEB' : 'Non disponible'}</div>`;
+      }
+
+      panel.innerHTML = `
     <div class="commune-popup">
       <div class="popup-name">${p.nom_commune}</div>
-      <div class="popup-price">${p.prix_m2_median?fmtN(p.prix_m2_median)+" €/m²":"Données insuffisantes"}</div>
-      <div class="popup-meta">Dept. ${p.departement} · ${p.nb_transactions?fmtN(p.nb_transactions)+" transactions":""}</div>
-      ${withLink?`
-        <a href="/commune?code=${p.commune_code}" class="btn btn-primary btn-sm" style="margin-top:.4rem">Analyse complète →</a>
-        <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="btn btn-outline btn-sm" style="margin-top:.4rem">🛰️ Voir sur Google Maps</a>
-      `:""}
+      ${metricHtml}
+      <div class="popup-meta">Dept. ${p.departement} · ${p.nb_transactions ? fmtN(p.nb_transactions) + " transactions /an" : ""}</div>
+      ${withLink ? `
+        <div style="display:flex; flex-direction:column; gap:0.4rem; margin-top:0.6rem;">
+          <a href="/commune?code=${p.commune_code}" class="btn btn-primary btn-sm" style="text-align:center;">Fiche Commune →</a>
+          <button onclick="chargerPois('${p.commune_code}', ${p.lat}, ${p.lng})" class="btn btn-outline btn-sm" style="border-color: #7c3aed; color: #7c3aed;">🚂 Voir Gares & Écoles</button>
+          <button onclick="chargerTransactions(${p.lat}, ${p.lng}, 5)" class="btn btn-outline btn-sm" style="border-color: #dc2626; color: #dc2626;">📍 Voir les ventes réelles</button>
+          <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="btn btn-outline btn-sm" style="text-align:center;">🛰️ Google Maps</a>
+        </div>
+      `: ""}
     </div>`;
-}
+    }
 
-document.getElementById("btn-load").addEventListener("click",chargerCarte);
-chargerCarte();
-</script>
+    async function chargerPois(commune_code, lat, lng) {
+      const panel = document.getElementById("info-panel");
+      panel.innerHTML += `<div style="font-size:.8rem;color:var(--muted); margin-top:.5rem;">Recherche spatiale des équipements...</div>`;
+
+      try {
+        const res = await fetch(`${API}/api/analyses/pois?commune_code=${commune_code}`);
+        if (!res.ok) throw new Error("Erreur de chargement");
+        const pois = await res.json();
+
+        txLayer.clearLayers();
+
+        pois.forEach(p => {
+          const isGare = p.type === 'gare';
+          const iconText = isGare ? '🚂' : '🎓';
+          const markerColor = isGare ? '#7c3aed' : '#2563eb';
+          
+          const htmlIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background:${markerColor}; color:white; font-size:0.95rem; padding: 4px; border-radius:50%; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${iconText}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+
+          const popupContent = `
+            <div style="font-size:0.85rem; line-height:1.4;">
+              <strong style="color:${markerColor}">${isGare ? '🚂 Gare SNCF' : '🎓 Établissement scolaire'}</strong><br>
+              ${p.nom || 'Sans nom'}<br>
+              <span class="text-muted" style="font-size:0.75rem" title="Centroïde géométrique (centre de gravité) de la commune">${fmtN(p.dist_centroid_m)}m du centre de la commune ⓘ</span>
+            </div>
+          `;
+
+          L.marker([p.latitude, p.longitude], { icon: htmlIcon })
+           .bindPopup(popupContent)
+           .addTo(txLayer);
+        });
+
+        if (pois.length > 0) {
+          map.setView([lat, lng], 13);
+          panel.innerHTML += `<div style="font-size:.8rem;color:#16a34a; margin-top:.5rem;">${pois.length} équipements affichés sur la carte.</div>`;
+        } else {
+          panel.innerHTML += `<div style="font-size:.8rem;color:#dc2626; margin-top:.5rem;">Aucune gare ni école détectée dans les contours de cette commune.</div>`;
+        }
+      } catch (e) {
+        console.error(e);
+        panel.innerHTML += `<div style="font-size:.8rem;color:#dc2626; margin-top:.5rem;">Erreur de chargement des équipements.</div>`;
+      }
+    }
+
+    async function chargerTransactions(lat, lng, rayon_km) {
+      const type = document.getElementById("f-type").value;
+      const panel = document.getElementById("info-panel");
+      panel.innerHTML += `<div style="font-size:.8rem;color:var(--muted); margin-top:.5rem;">Chargement des transactions...</div>`;
+
+      // Basculer automatiquement en vue satellite
+      if (!isSatellite) {
+        map.removeLayer(tileNormal);
+        tileSatellite.addTo(map);
+        isSatellite = true;
+        if (geojsonLayer) geojsonLayer.setStyle(f => layerStyle(f));
+      }
+      
+      try {
+        const res = await fetch(`${API}/api/carte/transactions?lat=${lat}&lng=${lng}&rayon_km=${rayon_km}&type=${type}`);
+        if (!res.ok) throw new Error("Erreur de chargement");
+        const txs = await res.json();
+        
+        txLayer.clearLayers();
+        
+        txs.forEach(tx => {
+          const prix_k = Math.round(tx.valeur_fonciere / 1000) + " k€";
+          const htmlIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div class="price-marker">${prix_k}</div>`,
+            iconSize: [50, 24],
+            iconAnchor: [25, 12]
+          });
+          
+          const popupContent = `
+            <div class="tx-popup">
+              <strong>${fmtN(tx.valeur_fonciere)} €</strong><br>
+              ${tx.surface_bati} m² (${fmtN(Math.round(tx.prix_m2))} €/m²)<br>
+              DPE: ${tx.dpe_classe || 'Non renseigné'}<br>
+              <span class="text-muted" style="font-size:0.75rem">${new Date(tx.date_mutation).toLocaleDateString('fr-FR')}</span>
+            </div>
+          `;
+          
+          L.marker([tx.latitude, tx.longitude], { icon: htmlIcon })
+           .bindPopup(popupContent)
+           .addTo(txLayer);
+        });
+        
+        if (txs.length > 0) {
+          map.setView([lat, lng], 13);
+          panel.innerHTML += `<div style="font-size:.8rem;color:#16a34a; margin-top:.5rem;">${txs.length} transactions affichées sur la carte.</div>`;
+        } else {
+          panel.innerHTML += `<div style="font-size:.8rem;color:#dc2626; margin-top:.5rem;">Aucune transaction trouvée dans la base DVF.</div>`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    document.getElementById("btn-load").addEventListener("click", chargerCarte);
+    chargerCarte();
+  </script>
 </body>
+
 </html>

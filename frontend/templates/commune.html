@@ -1,160 +1,169 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Fiche commune — ImmoBI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
 </head>
+
 <body>
-<nav>
-  <div class="nav-inner">
-    <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
-    <ul class="nav-links">
-      <li><a href="/">Analyser</a></li>
-      <li><a href="/carte">Carte des prix</a></li>
-      <li><a href="/commune" class="active">Fiche commune</a></li>
-      <li><a href="/opportunites">Opportunités</a></li>
-    </ul>
-  </div>
-</nav>
-
-<div class="page-header">
-  <div class="container" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem">
-    <div>
-      <h1 id="h-commune">Fiche commune</h1>
-      <p>Analyse complète : prix, énergie, transport, bruit, contexte socio-économique</p>
+  <nav>
+    <div class="nav-inner">
+      <a class="nav-logo" href="/">ImmoBI <span>2026</span></a>
+      <ul class="nav-links">
+        <li><a href="/">Analyser</a></li>
+        <li><a href="/carte">Carte des prix</a></li>
+        <li><a href="/commune" class="active">Fiche commune</a></li>
+        <li><a href="/opportunites">Opportunités</a></li>
+      </ul>
     </div>
-    <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
-      <div class="autocomplete-wrap" style="width:240px">
-        <input id="inp-commune" type="text" placeholder="Chercher une commune…" autocomplete="off"
-               style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">
-        <input id="hid-commune" type="hidden">
+  </nav>
+
+  <div class="page-header">
+    <div class="container"
+      style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+      <div>
+        <h1 id="h-commune">Fiche commune</h1>
+        <p>Analyse complète : prix, énergie, transport, bruit, contexte socio-économique</p>
       </div>
-      <select id="inp-type" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;width:140px">
-        <option value="Appartement">Appartement</option>
-        <option value="Maison">Maison</option>
-      </select>
-      <button class="btn btn-ghost" id="btn-go">Analyser</button>
+      <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+        <div class="autocomplete-wrap" style="width:240px">
+          <input id="inp-commune" type="text" placeholder="Chercher une commune…" autocomplete="off"
+            style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff">
+          <input id="hid-commune" type="hidden">
+        </div>
+        <select id="inp-type"
+          style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;width:140px">
+          <option value="Appartement">Appartement</option>
+          <option value="Maison">Maison</option>
+        </select>
+        <button class="btn btn-ghost" id="btn-go">Analyser</button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="container" style="padding-top:2rem;padding-bottom:3rem">
-  <div id="result">
-    <div class="alert alert-info">Recherchez une commune pour afficher son analyse complète.</div>
+  <div class="container" style="padding-top:2rem;padding-bottom:3rem">
+    <div id="result">
+      <div class="alert alert-info">Recherchez une commune pour afficher son analyse complète.</div>
+    </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script type="module">
-const API = "";
-let charts = {};
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module">
+    const API = "";
+    let charts = {};
 
-const fmt  = n => n==null?"—":new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
-const fmtN = n => n==null?"—":new Intl.NumberFormat("fr-FR").format(n);
-const fmtP = n => (n==null||n==="")?"—":parseFloat(n).toFixed(1)+" %";
-const D    = id => document.getElementById(id);
+    const fmt = n => n == null ? "—" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+    const fmtN = n => n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n);
+    const fmtP = n => (n == null || n === "") ? "—" : parseFloat(n).toFixed(1) + " %";
+    const D = id => document.getElementById(id);
 
-function debounce(fn,ms=250){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
-function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
-async function apiFetch(url){const r=await fetch(API+url);if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}
+    function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
+    function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id] } }
+    async function apiFetch(url) { const r = await fetch(API + url); if (!r.ok) throw new Error("HTTP " + r.status); return r.json() }
 
-// Autocomplete
-const inp = D("inp-commune"), hid = D("hid-commune");
-inp.addEventListener("input",debounce(async()=>{
-  const q=inp.value.trim();
-  if(q.length<2){closeAC();return}
-  const res=await apiFetch(`/api/communes/search?q=${encodeURIComponent(q)}`).catch(()=>[]);
-  renderAC(res);
-}));
-document.addEventListener("click",e=>{if(e.target!==inp)closeAC()});
+    // Autocomplete
+    const inp = D("inp-commune"), hid = D("hid-commune");
+    inp.addEventListener("input", debounce(async () => {
+      const q = inp.value.trim();
+      if (q.length < 2) { closeAC(); return }
+      const res = await apiFetch(`/api/communes/search?q=${encodeURIComponent(q)}`).catch(() => []);
+      renderAC(res);
+    }));
+    document.addEventListener("click", e => { if (e.target !== inp) closeAC() });
 
-function renderAC(items){
-  closeAC();if(!items.length)return;
-  const ul=document.createElement("ul");ul.className="autocomplete-list";
-  items.forEach(it=>{
-    const li=document.createElement("li");
-    li.innerHTML=`${it.nom_commune} <span>(${it.commune_code})</span>`;
-    li.addEventListener("click",()=>{inp.value=it.nom_commune;hid.value=it.commune_code;closeAC();});
-    ul.appendChild(li);
-  });
-  inp.parentElement.appendChild(ul);
-}
-function closeAC(){inp.parentElement.querySelector(".autocomplete-list")?.remove()}
-
-D("btn-go").addEventListener("click",()=>{const c=hid.value;if(c)analyser(c)});
-inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&hid.value)analyser(hid.value)});
-
-// URL param ?code=
-const urlCode = new URLSearchParams(location.search).get("code");
-if(urlCode){hid.value=urlCode;analyser(urlCode)}
-
-async function analyser(code){
-  const type=D("inp-type").value;
-  D("result").innerHTML=`<div class="spinner"></div><p class="loading-text">Chargement de la fiche commune…</p>`;
-
-  const [resume,dpe,transport,bruit,tendances] = await Promise.allSettled([
-    apiFetch(`/api/communes/${code}/resume`),
-    apiFetch(`/api/analyses/dpe?commune_code=${code}&type=${type}`),
-    apiFetch(`/api/analyses/transport?commune_code=${code}&type=${type}`),
-    apiFetch(`/api/analyses/bruit?commune_code=${code}&type=${type}`),
-    apiFetch(`/api/analyses/tendances?commune_code=${code}&type=${type}`),
-  ]);
-
-  const r     = resume.status==="fulfilled"    ? resume.value    : null;
-
-  if(!r){D("result").innerHTML=`<div class="alert alert-error">Commune introuvable ou sans données.</div>`;return}
-
-  // Normaliser les champs numériques
-  r.revenu_median  = parseFloat(r.revenu_median)  || null;
-  r.taux_chomage   = parseFloat(r.taux_chomage)   || null;
-  r.prix_m2_median = parseFloat(r.prix_m2_median) || null;
-  const tendN = (tendances.status==="fulfilled" ? tendances.value : []).map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
-  const dpeN  = (dpe.status==="fulfilled"       ? dpe.value       : []).map(d=>({...d, prix_m2_median: parseFloat(d.prix_m2_median)||null}));
-  const trN   = (transport.status==="fulfilled" ? transport.value : []).map(t=>({...t, prix_m2_median: parseFloat(t.prix_m2_median)||null}));
-  const brN   = (bruit.status==="fulfilled"     ? bruit.value     : []).map(b=>({...b, prix_m2_median: parseFloat(b.prix_m2_median)||null}));
-  const tend=tendN, dpeD=dpeN, trD=trN, brD=brN;
-
-  D("h-commune").textContent=r.nom_commune||"Fiche commune";
-
-  // Calcul tendance
-  let mktBadge="",mktClass="stable";
-  if(tend.length>=4){
-    const last=tend[tend.length-1],old=tend[Math.max(0,tend.length-8)];
-    if(last?.prix_m2_median&&old?.prix_m2_median){
-      const delta=((parseFloat(last.prix_m2_median)-parseFloat(old.prix_m2_median))/parseFloat(old.prix_m2_median)*100);
-      mktClass=delta>5?"hot":delta>2?"warm":delta<-3?"cool":"stable";
-      const labels={hot:"Marché en hausse",warm:"Marché dynamique",stable:"Marché stable",cool:"Marché en baisse"};
-      const icons={hot:"🔥",warm:"📈",stable:"🔵",cool:"❄️"};
-      mktBadge=`<span class="market-badge market-${mktClass}">${icons[mktClass]} ${labels[mktClass]} (${delta>0?"+":""}${delta.toFixed(1)}%)</span>`;
+    function renderAC(items) {
+      closeAC(); if (!items.length) return;
+      const ul = document.createElement("ul"); ul.className = "autocomplete-list";
+      items.forEach(it => {
+        const li = document.createElement("li");
+        li.innerHTML = `${it.nom_commune} <span>(${it.commune_code})</span>`;
+        li.addEventListener("click", () => { inp.value = it.nom_commune; hid.value = it.commune_code; closeAC(); });
+        ul.appendChild(li);
+      });
+      inp.parentElement.appendChild(ul);
     }
-  }
+    function closeAC() { inp.parentElement.querySelector(".autocomplete-list")?.remove() }
 
-  D("result").innerHTML=`
+    D("btn-go").addEventListener("click", () => { const c = hid.value; if (c) analyser(c) });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter" && hid.value) analyser(hid.value) });
+
+    // URL param ?code=
+    const urlCode = new URLSearchParams(location.search).get("code");
+    if (urlCode) { hid.value = urlCode; analyser(urlCode) }
+
+    async function analyser(code) {
+      const type = D("inp-type").value;
+      D("result").innerHTML = `<div class="spinner"></div><p class="loading-text">Chargement de la fiche commune…</p>`;
+
+      const [resume, dpe, transport, bruit, tendances, ecole, pois] = await Promise.allSettled([
+        apiFetch(`/api/communes/${code}/resume`),
+        apiFetch(`/api/analyses/dpe?commune_code=${code}&type=${type}`),
+        apiFetch(`/api/analyses/transport?commune_code=${code}&type=${type}`),
+        apiFetch(`/api/analyses/bruit?commune_code=${code}&type=${type}`),
+        apiFetch(`/api/analyses/tendances?commune_code=${code}&type=${type}`),
+        apiFetch(`/api/analyses/ecole?commune_code=${code}&type=${type}`),
+        apiFetch(`/api/analyses/pois?commune_code=${code}`),
+      ]);
+
+      const r = resume.status === "fulfilled" ? resume.value : null;
+
+      if (!r) { D("result").innerHTML = `<div class="alert alert-error">Commune introuvable ou sans données.</div>`; return }
+
+      // Normaliser les champs numériques
+      r.revenu_median = parseFloat(r.revenu_median) || null;
+      r.taux_chomage = parseFloat(r.taux_chomage) || null;
+      r.prix_m2_median = parseFloat(r.prix_m2_median) || null;
+      const tendN = (tendances.status === "fulfilled" ? tendances.value : []).map(t => ({ ...t, prix_m2_median: parseFloat(t.prix_m2_median) || null }));
+      const dpeN = (dpe.status === "fulfilled" ? dpe.value : []).map(d => ({ ...d, prix_m2_median: parseFloat(d.prix_m2_median) || null }));
+      const trN = (transport.status === "fulfilled" ? transport.value : []).map(t => ({ ...t, prix_m2_median: parseFloat(t.prix_m2_median) || null }));
+      const brN = (bruit.status === "fulfilled" ? bruit.value : []).map(b => ({ ...b, prix_m2_median: parseFloat(b.prix_m2_median) || null }));
+      const ecN = (ecole.status === "fulfilled" ? ecole.value : []).map(e => ({ ...e, prix_m2_median: parseFloat(e.prix_m2_median) || null }));
+      const poisN = pois.status === "fulfilled" ? pois.value : [];
+      const tend = tendN, dpeD = dpeN, trD = trN, brD = brN, ecD = ecN, poisD = poisN;
+
+      D("h-commune").textContent = r.nom_commune || "Fiche commune";
+
+      // Calcul tendance
+      let mktBadge = "", mktClass = "stable";
+      if (tend.length >= 4) {
+        const last = tend[tend.length - 1], old = tend[Math.max(0, tend.length - 8)];
+        if (last?.prix_m2_median && old?.prix_m2_median) {
+          const delta = ((parseFloat(last.prix_m2_median) - parseFloat(old.prix_m2_median)) / parseFloat(old.prix_m2_median) * 100);
+          mktClass = delta > 5 ? "hot" : delta > 2 ? "warm" : delta < -3 ? "cool" : "stable";
+          const labels = { hot: "Marché en hausse", warm: "Marché dynamique", stable: "Marché stable", cool: "Marché en baisse" };
+          const icons = { hot: "🔥", warm: "📈", stable: "🔵", cool: "❄️" };
+          mktBadge = `<span class="market-badge market-${mktClass}">${icons[mktClass]} ${labels[mktClass]} (${delta > 0 ? "+" : ""}${delta.toFixed(1)}%)</span>`;
+        }
+      }
+
+      D("result").innerHTML = `
   <!-- KPI strip -->
   <div class="kpi-strip" style="margin-bottom:1.5rem">
-    <div class="kpi">
-      <div class="kpi-val">${r.prix_m2_median ? fmtN(r.prix_m2_median)+"€" : "—"}</div>
-      <div class="kpi-lbl">Prix médian /m²</div>
-      ${mktBadge?`<div style="margin-top:.3rem">${mktBadge}</div>`:""}
+    <div class="kpi" style="cursor:help;" title="Prix au m² médian calculé sur l'ensemble des ventes réelles (DVF) de cette commune.">
+      <div class="kpi-val">${r.prix_m2_median ? fmtN(r.prix_m2_median) + "€" : "—"}</div>
+      <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Prix médian /m² ⓘ</div>
+      ${mktBadge ? `<div style="margin-top:.3rem">${mktBadge}</div>` : ""}
     </div>
-    <div class="kpi">
-      <div class="kpi-val">${r.nb_transactions?fmtN(r.nb_transactions):"—"}</div>
-      <div class="kpi-lbl">Transactions / an</div>
+    <div class="kpi" style="cursor:help;" title="Nombre de ventes immobilières enregistrées par an dans la commune (DVF).">
+      <div class="kpi-val">${r.nb_transactions ? fmtN(r.nb_transactions) : "—"}</div>
+      <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Transactions / an ⓘ</div>
     </div>
-    <div class="kpi">
-      <div class="kpi-val">${r.revenu_median?fmt(r.revenu_median):"—"}</div>
-      <div class="kpi-lbl">Revenu médian</div>
+    <div class="kpi" style="cursor:help;" title="Revenu disponible médian annuel par ménage (INSEE Filosofi 2021) : 50% des ménages gagnent plus, 50% gagnent moins.">
+      <div class="kpi-val">${r.revenu_median ? fmt(r.revenu_median) : "—"}</div>
+      <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Revenu médian ⓘ</div>
     </div>
-    <div class="kpi">
-      <div class="kpi-val">${r.taux_chomage!=null?fmtP(r.taux_chomage):"—"}</div>
-      <div class="kpi-lbl">Taux de chômage</div>
+    <div class="kpi" style="cursor:help;" title="Taux de chômage au sens du recensement INSEE de la population active (15-64 ans) de la commune (INSEE 2021).">
+      <div class="kpi-val">${r.taux_chomage != null ? fmtP(r.taux_chomage) : "—"}</div>
+      <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Taux de chômage ⓘ</div>
     </div>
-    <div class="kpi">
-      <div class="kpi-val">${r.population?fmtN(r.population):"—"}</div>
-      <div class="kpi-lbl">Population</div>
+    <div class="kpi" style="cursor:help;" title="Population totale légale de la commune (INSEE).">
+      <div class="kpi-val">${r.population ? fmtN(r.population) : "—"}</div>
+      <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Population ⓘ</div>
     </div>
   </div>
 
@@ -162,7 +171,7 @@ async function analyser(code){
   <div class="tabs" id="tabs">
     <div class="tab active" data-tab="marche">📊 Marché</div>
     <div class="tab" data-tab="energie">⚡ Énergie (DPE)</div>
-    <div class="tab" data-tab="transport">🚂 Transport</div>
+    <div class="tab" data-tab="transport">🚂 Accès & Services</div>
     <div class="tab" data-tab="bruit">🔇 Bruit</div>
     <div class="tab" data-tab="socio">🏘️ Contexte</div>
   </div>
@@ -171,15 +180,15 @@ async function analyser(code){
   <div class="tab-pane active" id="tab-marche">
     <div class="card" style="margin-bottom:1.25rem">
       <div class="card-title">Évolution du prix médian /m²</div>
-      ${tend.length>=3?`<div style="position:relative;height:420px"><canvas id="chart-tend"></canvas></div>`
-        :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
+      ${tend.length >= 3 ? `<div style="position:relative;height:420px"><canvas id="chart-tend"></canvas></div>`
+          : `<div class="alert alert-info">Historique de données insuffisant.</div>`}
     </div>
     <div class="card" style="margin-bottom:1.25rem">
       <div class="card-title">Volume de transactions par trimestre</div>
-      ${tend.length>=3?`<div style="position:relative;height:200px"><canvas id="chart-vol"></canvas></div>`
-        :`<div class="alert alert-info">Historique de données insuffisant.</div>`}
+      ${tend.length >= 3 ? `<div style="position:relative;height:200px"><canvas id="chart-vol"></canvas></div>`
+          : `<div class="alert alert-info">Historique de données insuffisant.</div>`}
     </div>
-    ${tend.length>=3?buildInsightTendance(tend):""}
+    ${tend.length >= 3 ? buildInsightTendance(tend) : ""}
   </div>
 
   <!-- Tab: DPE -->
@@ -187,30 +196,67 @@ async function analyser(code){
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Prix médian /m² par classe énergétique</div>
-        ${dpeD.length>=2?`<div style="position:relative;height:220px"><canvas id="chart-dpe"></canvas></div>`
-          :`<div class="alert alert-info">Données DPE insuffisantes pour cette commune.</div>`}
+        ${dpeD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-dpe"></canvas></div>`
+          : `<div class="alert alert-info">Données DPE insuffisantes pour cette commune.</div>`}
       </div>
       <div class="card">
         <div class="card-title">Distribution des classes DPE</div>
-        ${dpeD.length>=2?`<div style="position:relative;height:220px"><canvas id="chart-dpe-dist"></canvas></div>`
-          :`<div class="alert alert-info">Données DPE insuffisantes.</div>`}
+        ${dpeD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-dpe-dist"></canvas></div>`
+          : `<div class="alert alert-info">Données DPE insuffisantes.</div>`}
       </div>
     </div>
-    ${dpeD.length>=2?buildInsightDPE(dpeD):""}
+    ${dpeD.length >= 2 ? buildInsightDPE(dpeD) : ""}
   </div>
 
-  <!-- Tab: Transport -->
+  <!-- Tab: Transport & Services -->
   <div class="tab-pane" id="tab-transport">
-    <div class="grid-2">
+    <div class="grid-2" style="margin-bottom: 1.5rem;">
       <div class="card">
-        <div class="card-title">Prix médian /m² selon la distance à la gare</div>
-        ${trD.length>=2?`<div style="position:relative;height:220px"><canvas id="chart-tr"></canvas></div>`
-          :`<div class="alert alert-info">Données transport insuffisantes.</div>`}
+        <div class="card-title">Proximité des Transports (Gares)</div>
+        ${trD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-tr"></canvas></div>`
+          : `<div class="alert alert-info">Données transport insuffisantes.</div>`}
+        <div style="margin-top: 1rem;">
+          ${buildInsightTransport(trD)}
+        </div>
       </div>
-      <div class="card" style="display:flex;flex-direction:column;justify-content:center">
-        <div class="card-title">Analyse de la prime de transport</div>
-        ${buildInsightTransport(trD)}
+      <div class="card">
+        <div class="card-title">Proximité de l'Éducation (Écoles)</div>
+        ${ecD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-ecole"></canvas></div>`
+          : `<div class="alert alert-info">Données scolaires insuffisantes pour cette commune.</div>`}
+        <div style="margin-top: 1rem;">
+          ${buildInsightEcole(ecD)}
+        </div>
       </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Équipements répertoriés dans la commune (Gares & Écoles)</div>
+      ${poisD.length ? `
+      <div style="max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 700;">
+              <th style="padding: 0.5rem;">Catégorie</th>
+              <th style="padding: 0.5rem;">Nom de l'équipement</th>
+              <th style="padding: 0.5rem; text-align: right; cursor: help;" title="Distance calculée par rapport au centroïde géométrique (centre de gravité) de la commune">Distance approx. du centre ⓘ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${poisD.map(p => `
+            <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;">
+              <td style="padding: 0.6rem; font-weight: 600;">
+                ${p.type === 'gare' ? '🚂 Gare' : '🎓 Établissement scolaire'}
+              </td>
+              <td style="padding: 0.6rem; color: var(--text);">${p.nom || 'Sans nom'}</td>
+              <td style="padding: 0.6rem; text-align: right; color: var(--muted); font-weight: 600;">
+                ${fmtN(p.dist_centroid_m)} m
+              </td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; text-align: center; font-style: italic;">
+        * Les distances sont mesurées géospatialement par rapport au centroïde géométrique (centre de gravité) du contour de la commune.
+      </div>` : `<div class="alert alert-info">Aucun équipement (gare ou école) n'a été détecté à l'intérieur des contours de cette commune.</div>`}
     </div>
   </div>
 
@@ -219,8 +265,8 @@ async function analyser(code){
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Prix médian /m² selon l'exposition au bruit aérien</div>
-        ${brD.length>=2?`<div style="position:relative;height:220px"><canvas id="chart-bruit"></canvas></div>`
-          :`<div class="alert alert-info">Pas de zones de bruit identifiées autour de cette commune, ou données insuffisantes.</div>`}
+        ${brD.length >= 2 ? `<div style="position:relative;height:220px"><canvas id="chart-bruit"></canvas></div>`
+          : `<div class="alert alert-info">Pas de zones de bruit identifiées autour de cette commune, ou données insuffisantes.</div>`}
       </div>
       <div class="card">
         <div class="card-title">Décote par zone PEB</div>
@@ -232,9 +278,9 @@ async function analyser(code){
   <!-- Tab: Contexte socio -->
   <div class="tab-pane" id="tab-socio">
     <div class="grid-3">
-      ${buildSocioCard("💰","Revenu médian annuel",r.revenu_median?fmt(r.revenu_median):"Non disponible",r.revenu_median?"Source : INSEE Filosofi 2021":"",r.revenu_median?(parseFloat(r.revenu_median)>28000?"Commune aisée":parseFloat(r.revenu_median)>22000?"Revenu dans la moyenne":"Revenu inférieur à la moyenne nationale"):"")}
-      ${buildSocioCard("👔","Taux de chômage",r.taux_chomage!=null?fmtP(r.taux_chomage):"Non disponible",r.taux_chomage!=null?"Source : INSEE RP 2021":"",r.taux_chomage!=null?(parseFloat(r.taux_chomage)<7?"Faible chômage — marché du travail dynamique":parseFloat(r.taux_chomage)<12?"Chômage modéré":"Chômage élevé — marché sous tension"):"") }
-      ${buildSocioCard("👥","Population",r.population?fmtN(r.population)+" hab.":"Non disponible","Source : INSEE","Utilisé pour évaluer la liquidité du marché immobilier")}
+      ${buildSocioCard("💰", "Revenu médian annuel", r.revenu_median ? fmt(r.revenu_median) : "Non disponible", r.revenu_median ? "Source : INSEE Filosofi 2021" : "", r.revenu_median ? (parseFloat(r.revenu_median) > 28000 ? "Commune aisée" : parseFloat(r.revenu_median) > 22000 ? "Revenu dans la moyenne" : "Revenu inférieur à la moyenne nationale") : "")}
+      ${buildSocioCard("👔", "Taux de chômage", r.taux_chomage != null ? fmtP(r.taux_chomage) : "Non disponible", r.taux_chomage != null ? "Source : INSEE RP 2021" : "", r.taux_chomage != null ? (parseFloat(r.taux_chomage) < 7 ? "Faible chômage — marché du travail dynamique" : parseFloat(r.taux_chomage) < 12 ? "Chômage modéré" : "Chômage élevé — marché sous tension") : "")}
+      ${buildSocioCard("👥", "Population", r.population ? fmtN(r.population) + " hab." : "Non disponible", "Source : INSEE", "Utilisé pour évaluer la liquidité du marché immobilier")}
     </div>
     <div class="insight mt-2">
       <div class="insight-icon">ℹ️</div>
@@ -245,144 +291,187 @@ async function analyser(code){
   </div>
   `;
 
-  // ── Tab switching ────────────────────────────────────────
-  D("tabs").querySelectorAll(".tab").forEach(tab=>{
-    tab.addEventListener("click",()=>{
-      D("tabs").querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-      document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));
-      tab.classList.add("active");
-      D("tab-"+tab.dataset.tab).classList.add("active");
-      renderTabCharts(tab.dataset.tab,dpeN,trN,brN,tendN);
-    });
-  });
+      // ── Tab switching ────────────────────────────────────────
+      D("tabs").querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          D("tabs").querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+          document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+          tab.classList.add("active");
+          D("tab-" + tab.dataset.tab).classList.add("active");
+          renderTabCharts(tab.dataset.tab, dpeN, trN, brN, tendN, ecN);
+        });
+      });
 
-  // Render initial tab
-  renderTabCharts("marche",dpeN,trN,brN,tendN);
-}
+      // Render initial tab
+      renderTabCharts("marche", dpeN, trN, brN, tendN, ecN);
+    }
 
-function renderTabCharts(tab,dpeD,trD,brD,tend){
-  setTimeout(()=>{
-    if(tab==="marche"&&tend.length>=3){
-      destroyChart("chart-tend");destroyChart("chart-vol");
-      const DPE_C={A:"#00843d",B:"#50b24a",C:"#a4c437",D:"#f7d11e",E:"#ef8023",F:"#e3001b",G:"#7b001e"};
-      const vals=tend.map(t=>t.prix_m2_median).filter(Boolean);
-      const vMin=Math.min(...vals),vMax=Math.max(...vals);
-      const padding=(vMax-vMin)*0.15||vMin*0.1;
-      const yMin=Math.floor((vMin-padding)/100)*100;
-      const yMax=Math.ceil((vMax+padding)/100)*100;
-      charts["chart-tend"]=new Chart(D("chart-tend").getContext("2d"),{type:"line",
-        data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Prix /m²",data:tend.map(t=>t.prix_m2_median),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.08)",fill:true,tension:.3,pointRadius:4,pointHoverRadius:6}]},
-        options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>Math.round(ctx.parsed.y)+" €/m²"}}},scales:{y:{min:yMin,max:yMax,ticks:{callback:v=>v.toLocaleString("fr-FR")+" €",maxTicksLimit:8},grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
-      charts["chart-vol"]=new Chart(D("chart-vol").getContext("2d"),{type:"bar",
-        data:{labels:tend.map(t=>t.trimestre),datasets:[{label:"Transactions",data:tend.map(t=>t.nb_transactions),backgroundColor:"rgba(37,99,235,.5)",borderRadius:4}]},
-        options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:"#f0f0f0"}}},responsive:true,maintainAspectRatio:false}});
+    function renderTabCharts(tab, dpeD, trD, brD, tend, ecD) {
+      setTimeout(() => {
+        if (tab === "marche" && tend.length >= 3) {
+          destroyChart("chart-tend"); destroyChart("chart-vol");
+          const vals = tend.map(t => t.prix_m2_median).filter(Boolean);
+          const vMin = Math.min(...vals), vMax = Math.max(...vals);
+          const padding = (vMax - vMin) * 0.15 || vMin * 0.1;
+          const yMin = Math.floor((vMin - padding) / 100) * 100;
+          const yMax = Math.ceil((vMax + padding) / 100) * 100;
+          charts["chart-tend"] = new Chart(D("chart-tend").getContext("2d"), {
+            type: "line",
+            data: { labels: tend.map(t => t.trimestre), datasets: [{ label: "Prix /m²", data: tend.map(t => t.prix_m2_median), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.08)", fill: true, tension: .3, pointRadius: 4, pointHoverRadius: 6 }] },
+            options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => Math.round(ctx.parsed.y) + " €/m²" } } }, scales: { y: { min: yMin, max: yMax, ticks: { callback: v => v.toLocaleString("fr-FR") + " €", maxTicksLimit: 8 }, grid: { color: "#f0f0f0" } } }, responsive: true, maintainAspectRatio: false }
+          });
+          charts["chart-vol"] = new Chart(D("chart-vol").getContext("2d"), {
+            type: "bar",
+            data: { labels: tend.map(t => t.trimestre), datasets: [{ label: "Transactions", data: tend.map(t => t.nb_transactions), backgroundColor: "rgba(37,99,235,.5)", borderRadius: 4 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: "#f0f0f0" } } }, responsive: true, maintainAspectRatio: false }
+          });
+        }
+        if (tab === "energie" && dpeD.length >= 2) {
+          const DPE_COLORS = { A: "#00843d", B: "#50b24a", C: "#a4c437", D: "#f7d11e", E: "#ef8023", F: "#e3001b", G: "#7b001e" };
+          destroyChart("chart-dpe"); destroyChart("chart-dpe-dist");
+          charts["chart-dpe"] = new Chart(D("chart-dpe").getContext("2d"), {
+            type: "bar",
+            data: { labels: dpeD.map(d => d.dpe_classe), datasets: [{ data: dpeD.map(d => d.prix_m2_median), backgroundColor: dpeD.map(d => DPE_COLORS[d.dpe_classe] || "#999"), borderRadius: 4 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+          });
+          charts["chart-dpe-dist"] = new Chart(D("chart-dpe-dist").getContext("2d"), {
+            type: "doughnut",
+            data: { labels: dpeD.map(d => "Classe " + d.dpe_classe), datasets: [{ data: dpeD.map(d => d.nb_transactions), backgroundColor: dpeD.map(d => DPE_COLORS[d.dpe_classe] || "#999") }] },
+            options: { plugins: { legend: { position: "right" } }, responsive: true, maintainAspectRatio: false }
+          });
+        }
+        if (tab === "transport" && trD.length >= 2) {
+          destroyChart("chart-tr");
+          const ORDER = { "0-500m": 0, "500m-1km": 1, "1-2km": 2, "2-5km": 3, ">5km": 4 };
+          const sorted = [...trD].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
+          charts["chart-tr"] = new Chart(D("chart-tr").getContext("2d"), {
+            type: "bar",
+            data: { labels: sorted.map(d => d.tranche_distance), datasets: [{ label: "Prix /m²", data: sorted.map(d => d.prix_m2_median), backgroundColor: sorted.map((_, i) => `rgba(124,58,237,${1 - i * 0.15})`), borderRadius: 4 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+          });
+          // Écoles Chart
+          if (ecD && ecD.length >= 2) {
+            destroyChart("chart-ecole");
+            const sortedEc = [...ecD].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
+            charts["chart-ecole"] = new Chart(D("chart-ecole").getContext("2d"), {
+              type: "bar",
+              data: { labels: sortedEc.map(d => d.tranche_distance), datasets: [{ label: "Prix /m²", data: sortedEc.map(d => d.prix_m2_median), backgroundColor: sortedEc.map((_, i) => `rgba(37,99,235,${1 - i * 0.15})`), borderRadius: 4 }] },
+              options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+            });
+          }
+        }
+        if (tab === "bruit" && brD.length >= 2) {
+          destroyChart("chart-bruit");
+          const BRUIT_C = { "A": "#dc2626", "B": "#f97316", "C": "#fbbf24", "D": "#facc15", "Hors zone": "#22c55e" };
+          charts["chart-bruit"] = new Chart(D("chart-bruit").getContext("2d"), {
+            type: "bar",
+            data: { labels: brD.map(d => d.peb_zone || "Hors zone"), datasets: [{ data: brD.map(d => d.prix_m2_median), backgroundColor: brD.map(d => BRUIT_C[d.peb_zone] || BRUIT_C["Hors zone"]), borderRadius: 4 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => v + " €" } } }, responsive: true, maintainAspectRatio: false }
+          });
+        }
+      }, 50);
     }
-    if(tab==="energie"&&dpeD.length>=2){
-      const DPE_COLORS={A:"#00843d",B:"#50b24a",C:"#a4c437",D:"#f7d11e",E:"#ef8023",F:"#e3001b",G:"#7b001e"};
-      destroyChart("chart-dpe");destroyChart("chart-dpe-dist");
-      charts["chart-dpe"]=new Chart(D("chart-dpe").getContext("2d"),{type:"bar",
-        data:{labels:dpeD.map(d=>d.dpe_classe),datasets:[{data:dpeD.map(d=>d.prix_m2_median),backgroundColor:dpeD.map(d=>DPE_COLORS[d.dpe_classe]||"#999"),borderRadius:4}]},
-        options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+" €"}}},responsive:true,maintainAspectRatio:false}});
-      charts["chart-dpe-dist"]=new Chart(D("chart-dpe-dist").getContext("2d"),{type:"doughnut",
-        data:{labels:dpeD.map(d=>"Classe "+d.dpe_classe),datasets:[{data:dpeD.map(d=>d.nb_transactions),backgroundColor:dpeD.map(d=>DPE_COLORS[d.dpe_classe]||"#999")}]},
-        options:{plugins:{legend:{position:"right"}},responsive:true,maintainAspectRatio:false}});
-    }
-    if(tab==="transport"&&trD.length>=2){
-      destroyChart("chart-tr");
-      const ORDER={"0-500m":0,"500m-1km":1,"1-2km":2,"2-5km":3,">5km":4};
-      const sorted=[...trD].sort((a,b)=>(ORDER[a.tranche_distance]||9)-(ORDER[b.tranche_distance]||9));
-      charts["chart-tr"]=new Chart(D("chart-tr").getContext("2d"),{type:"bar",
-        data:{labels:sorted.map(d=>d.tranche_distance),datasets:[{label:"Prix /m²",data:sorted.map(d=>d.prix_m2_median),backgroundColor:sorted.map((_,i)=>`rgba(124,58,237,${1-i*0.15})`),borderRadius:4}]},
-        options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+" €"}}},responsive:true,maintainAspectRatio:false}});
-    }
-    if(tab==="bruit"&&brD.length>=2){
-      destroyChart("chart-bruit");
-      const BRUIT_C={"A":"#dc2626","B":"#f97316","C":"#fbbf24","D":"#facc15","Hors zone":"#22c55e"};
-      charts["chart-bruit"]=new Chart(D("chart-bruit").getContext("2d"),{type:"bar",
-        data:{labels:brD.map(d=>d.peb_zone||"Hors zone"),datasets:[{data:brD.map(d=>d.prix_m2_median),backgroundColor:brD.map(d=>BRUIT_C[d.peb_zone]||BRUIT_C["Hors zone"]),borderRadius:4}]},
-        options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+" €"}}},responsive:true,maintainAspectRatio:false}});
-    }
-  },50);
-}
 
-function buildInsightTendance(tend){
-  if(tend.length<4)return"";
-  const last=tend[tend.length-1],old=tend[Math.max(0,tend.length-8)];
-  if(!last?.prix_m2_median||!old?.prix_m2_median)return"";
-  const delta=((last.prix_m2_median-old.prix_m2_median)/old.prix_m2_median*100);
-  const type=delta>5?"warning":delta>0?"":"success";
-  return`<div class="insight ${type}">
-    <div class="insight-icon">${delta>3?"⚠️":delta>0?"📈":"📉"}</div>
-    <div class="insight-text">Les prix ont évolué de <strong>${delta>0?"+":""}${delta.toFixed(1)}%</strong> sur les 2 dernières années (${old.trimestre} → ${last.trimestre}).
-    ${delta>5?" Le marché est en forte hausse — les acheteurs doivent agir rapidement.":delta>0?" Marché stable à légèrement haussier.":delta<-3?" Le marché est en baisse — opportunité pour les acheteurs.":""}</div>
+    function buildInsightTendance(tend) {
+      if (tend.length < 4) return "";
+      const last = tend[tend.length - 1], old = tend[Math.max(0, tend.length - 8)];
+      if (!last?.prix_m2_median || !old?.prix_m2_median) return "";
+      const delta = ((last.prix_m2_median - old.prix_m2_median) / old.prix_m2_median * 100);
+      const type = delta > 5 ? "warning" : delta > 0 ? "" : "success";
+      return `<div class="insight ${type}">
+    <div class="insight-icon">${delta > 3 ? "⚠️" : delta > 0 ? "📈" : "📉"}</div>
+    <div class="insight-text">Les prix ont évolué de <strong>${delta > 0 ? "+" : ""}${delta.toFixed(1)}%</strong> sur les 2 dernières années (${old.trimestre} → ${last.trimestre}).
+    ${delta > 5 ? " Le marché est en forte hausse — les acheteurs doivent agir rapidement." : delta > 0 ? " Marché stable à légèrement haussier." : delta < -3 ? " Le marché est en baisse — opportunité pour les acheteurs." : ""}</div>
   </div>`;
-}
+    }
 
-function buildInsightDPE(dpe){
-  const best=dpe.find(d=>["A","B"].includes(d.dpe_classe));
-  const worst=dpe.find(d=>["F","G"].includes(d.dpe_classe));
-  if(!best||!worst)return"";
-  const delta=(((best.prix_m2_median-worst.prix_m2_median)/worst.prix_m2_median)*100).toFixed(0);
-  return`<div class="insight success mt-2">
+    function buildInsightDPE(dpe) {
+      const best = dpe.find(d => ["A", "B"].includes(d.dpe_classe));
+      const worst = dpe.find(d => ["F", "G"].includes(d.dpe_classe));
+      if (!best || !worst) return "";
+      const delta = (((best.prix_m2_median - worst.prix_m2_median) / worst.prix_m2_median) * 100).toFixed(0);
+      return `<div class="insight success mt-2">
     <div class="insight-icon">💡</div>
     <div class="insight-text">Un bien classé <strong>A ou B</strong> se vend en moyenne <strong>+${delta}% plus cher</strong> qu'un classé F ou G dans cette commune. L'investissement dans la rénovation énergétique peut se valoriser rapidement.</div>
   </div>`;
-}
+    }
 
-function buildInsightTransport(tr){
-  if(!tr.length)return`<div class="alert alert-info">Pas de données transport disponibles.</div>`;
-  const ORDER={"0-500m":0,"500m-1km":1,"1-2km":2,"2-5km":3,">5km":4};
-  const sorted=[...tr].sort((a,b)=>(ORDER[a.tranche_distance]||9)-(ORDER[b.tranche_distance]||9));
-  const near=sorted[0],far=sorted[sorted.length-1];
-  const delta=near&&far&&near.prix_m2_median&&far.prix_m2_median
-    ?((near.prix_m2_median-far.prix_m2_median)/far.prix_m2_median*100).toFixed(0):null;
-  return`
-    ${sorted.map(d=>`<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+    function buildInsightTransport(tr) {
+      if (!tr.length) return `<div class="alert alert-info">Pas de données transport disponibles.</div>`;
+      const ORDER = { "0-500m": 0, "500m-1km": 1, "1-2km": 2, "2-5km": 3, ">5km": 4 };
+      const sorted = [...tr].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
+      const near = sorted[0], far = sorted[sorted.length - 1];
+      const delta = near && far && near.prix_m2_median && far.prix_m2_median
+        ? ((near.prix_m2_median - far.prix_m2_median) / far.prix_m2_median * 100).toFixed(0) : null;
+      return `
+    ${sorted.map(d => `<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
       <div style="width:80px;font-size:.82rem;font-weight:600">${d.tranche_distance}</div>
       <div style="flex:1;height:8px;background:var(--border);border-radius:99px;overflow:hidden">
-        <div style="height:100%;border-radius:99px;background:var(--purple);width:${Math.round((d.prix_m2_median||0)/((sorted[0]?.prix_m2_median||1))*100)}%"></div>
+        <div style="height:100%;border-radius:99px;background:var(--purple);width:${Math.round((d.prix_m2_median || 0) / ((sorted[0]?.prix_m2_median || 1)) * 100)}%"></div>
       </div>
-      <div style="font-weight:700;font-size:.85rem;width:80px;text-align:right">${d.prix_m2_median?Math.round(d.prix_m2_median)+" €/m²":"—"}</div>
+      <div style="font-weight:700;font-size:.85rem;width:80px;text-align:right">${d.prix_m2_median ? Math.round(d.prix_m2_median) + " €/m²" : "—"}</div>
     </div>`).join("")}
-    ${delta?`<div class="insight mt-2">
+    ${delta ? `<div class="insight mt-2" style="font-size:0.80rem;">
       <div class="insight-icon">🚂</div>
-      <div class="insight-text">La proximité à une gare (<500m) génère une <strong>prime de +${delta}%</strong> par rapport aux biens éloignés de plus de 5 km.</div>
-    </div>`:""}`;
-}
+      <div class="insight-text">La proximité à une gare (<500m) génère une <strong>prime de +${delta}%</strong> par rapport aux biens éloignés.</div>
+    </div>`: ""}`;
+    }
 
-function buildInsightBruit(br){
-  if(!br.length)return`<div class="alert alert-info">Pas de données de bruit disponibles pour cette commune.</div>`;
-  const horsZone=br.find(d=>d.peb_zone==="Hors zone"||!d.peb_zone);
-  const items=br.filter(d=>d.peb_zone&&d.peb_zone!=="Hors zone");
-  return`
-    ${br.map(d=>{
-      const decote=horsZone&&d.peb_zone&&d.peb_zone!=="Hors zone"&&horsZone.prix_m2_median
-        ?((d.prix_m2_median-horsZone.prix_m2_median)/horsZone.prix_m2_median*100).toFixed(1):null;
-      return`<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--border)">
-        <div style="width:80px;font-size:.82rem;font-weight:600;color:${d.peb_zone==="A"?"#dc2626":d.peb_zone==="B"?"#f97316":d.peb_zone==="Hors zone"?"#16a34a":"#d97706"}">${d.peb_zone||"Hors zone"}</div>
+    function buildInsightEcole(ec) {
+      if (!ec.length) return `<div class="alert alert-info">Pas de données scolaires disponibles.</div>`;
+      const ORDER = { "0-500m": 0, "500m-1km": 1, "1-2km": 2, "2-5km": 3, ">5km": 4 };
+      const sorted = [...ec].sort((a, b) => (ORDER[a.tranche_distance] || 9) - (ORDER[b.tranche_distance] || 9));
+      const near = sorted[0], far = sorted[sorted.length - 1];
+      const delta = near && far && near.prix_m2_median && far.prix_m2_median
+        ? ((near.prix_m2_median - far.prix_m2_median) / far.prix_m2_median * 100).toFixed(0) : null;
+      return `
+    ${sorted.map(d => `<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+      <div style="width:80px;font-size:.82rem;font-weight:600">${d.tranche_distance}</div>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:99px;overflow:hidden">
+        <div style="height:100%;border-radius:99px;background:var(--primary);width:${Math.round((d.prix_m2_median || 0) / ((sorted[0]?.prix_m2_median || 1)) * 100)}%"></div>
+      </div>
+      <div style="font-weight:700;font-size:.85rem;width:80px;text-align:right">${d.prix_m2_median ? Math.round(d.prix_m2_median) + " €/m²" : "—"}</div>
+    </div>`).join("")}
+    ${delta ? `<div class="insight mt-2" style="font-size:0.80rem;">
+      <div class="insight-icon">🎓</div>
+      <div class="insight-text">La proximité directe d'une école (<500m) induit une <strong>prime de +${delta}%</strong> dans cette commune.</div>
+    </div>`: ""}`;
+    }
+
+    function buildInsightBruit(br) {
+      if (!br.length) return `<div class="alert alert-info">Pas de données de bruit disponibles pour cette commune.</div>`;
+      const horsZone = br.find(d => d.peb_zone === "Hors zone" || !d.peb_zone);
+      const items = br.filter(d => d.peb_zone && d.peb_zone !== "Hors zone");
+      return `
+    ${br.map(d => {
+        const decote = horsZone && d.peb_zone && d.peb_zone !== "Hors zone" && horsZone.prix_m2_median
+          ? ((d.prix_m2_median - horsZone.prix_m2_median) / horsZone.prix_m2_median * 100).toFixed(1) : null;
+        return `<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--border)">
+        <div style="width:80px;font-size:.82rem;font-weight:600;color:${d.peb_zone === "A" ? "#dc2626" : d.peb_zone === "B" ? "#f97316" : d.peb_zone === "Hors zone" ? "#16a34a" : "#d97706"}">${d.peb_zone || "Hors zone"}</div>
         <div style="flex:1;font-size:.82rem;color:var(--muted)">${d.nb_transactions} transactions</div>
-        <div style="font-weight:700;font-size:.85rem">${d.prix_m2_median?Math.round(d.prix_m2_median)+" €/m²":"—"}</div>
-        ${decote?`<div style="font-size:.75rem;font-weight:700;color:${parseFloat(decote)<0?"var(--danger)":"var(--success)"}">${parseFloat(decote)>0?"+":""}${decote}%</div>`:""}
+        <div style="font-weight:700;font-size:.85rem">${d.prix_m2_median ? Math.round(d.prix_m2_median) + " €/m²" : "—"}</div>
+        ${decote ? `<div style="font-size:.75rem;font-weight:700;color:${parseFloat(decote) < 0 ? "var(--danger)" : "var(--success)"}">${parseFloat(decote) > 0 ? "+" : ""}${decote}%</div>` : ""}
       </div>`;
-    }).join("")}
-    ${items.length?`<div class="insight danger mt-2">
+      }).join("")}
+    ${items.length ? `<div class="insight danger mt-2">
       <div class="insight-icon">🔇</div>
       <div class="insight-text">Les biens en zone PEB présentent une décote par rapport à ceux hors zone. Cette décote est <strong>obligatoirement divulguée</strong> lors d'une vente (État des Risques et Pollutions).</div>
-    </div>`:`<div class="insight success mt-2">
+    </div>`: `<div class="insight success mt-2">
       <div class="insight-icon">✅</div>
       <div class="insight-text">Cette commune n'est pas concernée par des zones d'exposition au bruit aérien significatives.</div>
     </div>`}`;
-}
+    }
 
-function buildSocioCard(icon,title,value,source,insight){
-  return`<div class="card">
+    function buildSocioCard(icon, title, value, source, insight) {
+      return `<div class="card">
     <div style="font-size:2rem;margin-bottom:.5rem">${icon}</div>
     <div class="card-title">${title}</div>
     <div style="font-size:1.5rem;font-weight:800;color:var(--primary);margin:.25rem 0">${value}</div>
-    ${source?`<div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">${source}</div>`:""}
-    ${insight?`<div class="insight mt-2" style="font-size:.8rem"><div class="insight-icon">ℹ️</div><div class="insight-text">${insight}</div></div>`:""}
+    ${source ? `<div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">${source}</div>` : ""}
+    ${insight ? `<div class="insight mt-2" style="font-size:.8rem"><div class="insight-icon">ℹ️</div><div class="insight-text">${insight}</div></div>` : ""}
   </div>`;
-}
-</script>
+    }
+  </script>
 </body>
+
 </html>

@@ -2,15 +2,16 @@
 Configuration partagée par tous les scripts d'ingestion.
 Modifier ici les départements et années cibles.
 """
+FORCE_OVERWRITE = False
 
 DEPARTEMENTS = [
     # Bretagne
     # "22",  # Côtes-d'Armor
     # "29",  # Finistère
     # "35",  # Ille-et-Vilaine
-    "56",  # Morbihan
+    # "56",  # Morbihan
     # Pays de la Loire
-    # "44",  # Loire-Atlantique
+    "44",  # Loire-Atlantique
     # "49",  # Maine-et-Loire
     # "53",  # Mayenne
     # "72",  # Sarthe

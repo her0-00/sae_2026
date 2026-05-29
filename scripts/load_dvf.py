@@ -9,7 +9,8 @@ import pandas as pd
 import psycopg2.extras
 import requests
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.config import DEPARTEMENTS, ANNEES
+from scripts import config
+from scripts.config import ANNEES
 from scripts._db import get_conn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%H:%M:%S")
@@ -127,11 +128,24 @@ def charger_dvf(dept: str, annee: int, conn) -> int:
 
 
 def main():
-    log.info("DVF — %d depts × %d années", len(DEPARTEMENTS), len(ANNEES))
+    log.info("DVF — %d depts × %d années", len(config.DEPARTEMENTS), len(ANNEES))
     conn = get_conn()
     total = 0
+    
+    # Sécurité Idempotence
+    for dept in config.DEPARTEMENTS:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM transactions WHERE departement_code = %s LIMIT 1", (dept,))
+            if cur.fetchone() is not None:
+                if getattr(config, 'FORCE_OVERWRITE', False):
+                    log.warning("Suppression des anciennes transactions pour %s...", dept)
+                    cur.execute("DELETE FROM transactions WHERE departement_code = %s", (dept,))
+                    conn.commit()
+                else:
+                    raise Exception(f"Les transactions pour le département {dept} existent déjà. Activez 'force_overwrite' dans Dagster pour les écraser.")
+
     for annee in ANNEES:
-        for dept in DEPARTEMENTS:
+        for dept in config.DEPARTEMENTS:
             try:
                 total += charger_dvf(dept, annee, conn)
             except Exception as e:

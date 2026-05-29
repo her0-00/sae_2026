@@ -10,7 +10,8 @@ from pathlib import Path
 import psycopg2.extras
 import requests
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.config import DEPARTEMENTS, BBOXES
+from scripts import config
+from scripts.config import BBOXES
 from scripts._db import get_conn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-8s %(message)s", datefmt="%H:%M:%S")
@@ -154,14 +155,14 @@ def charger_poi(dept: str, toutes_gares: list, conn) -> tuple[int, int]:
 
 
 def main():
-    log.info("POI — %d départements", len(DEPARTEMENTS))
+    log.info("POI — %d départements", len(config.DEPARTEMENTS))
     conn = get_conn()
 
     # Charger TOUTES les gares SNCF une seule fois
     toutes_gares = charger_toutes_gares_sncf()
 
     tot_g = tot_e = 0
-    for dept in DEPARTEMENTS:
+    for dept in config.DEPARTEMENTS:
         try:
             g, e = charger_poi(dept, toutes_gares, conn)
             tot_g += g

@@ -9,10 +9,11 @@ bp = Blueprint("carte", __name__)
 @bp.get("/prix-m2")
 @cache.cached(timeout=600, query_string=True)
 def prix_m2_geojson():
-    """GeoJSON choroplèthe : communes colorées par prix/m² médian."""
+    """GeoJSON choroplèthe : communes colorées par prix/m² médian ou autre métrique."""
     departement = request.args.get("departement")
     type_local = request.args.get("type", "Appartement")
     annee = request.args.get("annee", type=int)
+    metric = request.args.get("metric", "prix")
 
     if not annee:
         # Dernière année disponible
@@ -31,8 +32,12 @@ def prix_m2_geojson():
             c.commune_code,
             c.nom_commune,
             c.departement_code,
+            c.revenu_median,
+            c.taux_chomage,
             p.prix_m2_median,
             p.nb_transactions,
+            dpe_stats.avg_dpe,
+            bruit_stats.pct_bruit,
             ST_Y(ST_Centroid(c.geom)) AS lat,
             ST_X(ST_Centroid(c.geom)) AS lng,
             ST_AsGeoJSON(c.geom)::json AS geometry
@@ -41,6 +46,32 @@ def prix_m2_geojson():
             ON p.commune_code = c.commune_code
            AND p.type_local   = %s
            AND p.annee        = %s
+        LEFT JOIN (
+            SELECT 
+                commune_code,
+                ROUND(AVG(
+                    CASE dpe_classe
+                        WHEN 'A' THEN 1.0
+                        WHEN 'B' THEN 2.0
+                        WHEN 'C' THEN 3.0
+                        WHEN 'D' THEN 4.0
+                        WHEN 'E' THEN 5.0
+                        WHEN 'F' THEN 6.0
+                        WHEN 'G' THEN 7.0
+                    END
+                )::numeric, 1) as avg_dpe
+            FROM transactions
+            WHERE est_valide = TRUE AND dpe_classe IS NOT NULL
+            GROUP BY commune_code
+        ) dpe_stats ON dpe_stats.commune_code = c.commune_code
+        LEFT JOIN (
+            SELECT 
+                commune_code,
+                ROUND((COUNT(CASE WHEN peb_zone IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0))::numeric, 1) as pct_bruit
+            FROM transactions
+            WHERE est_valide = TRUE
+            GROUP BY commune_code
+        ) bruit_stats ON bruit_stats.commune_code = c.commune_code
         WHERE c.geom IS NOT NULL
           {dept_filter}
         ORDER BY c.nom_commune
@@ -61,6 +92,19 @@ def prix_m2_geojson():
                 "nb_transactions": r["nb_transactions"],
                 "lat":            r["lat"],
                 "lng":            r["lng"],
+                
+                # Métriques additionnelles
+                "revenu_median":  float(r["revenu_median"]) if r["revenu_median"] else None,
+                "taux_chomage":   float(r["taux_chomage"]) if r["taux_chomage"] else None,
+                "avg_dpe":        float(r["avg_dpe"]) if r["avg_dpe"] else None,
+                "pct_bruit":      float(r["pct_bruit"]) if r["pct_bruit"] else 0.0,
+                
+                # Valeur à colorer
+                "metric_value":   float(r["prix_m2_median"]) if metric == "prix" else
+                                  float(r["revenu_median"] or 0.0) if metric == "revenu" else
+                                  float(r["taux_chomage"] or 0.0) if metric == "chomage" else
+                                  float(r["avg_dpe"] or 0.0) if metric == "dpe" else
+                                  float(r["pct_bruit"] or 0.0) if metric == "bruit" else float(r["prix_m2_median"])
             },
         }
         for r in rows

@@ -66,6 +66,56 @@ def estimer():
         except (ValueError, TypeError):
             pass
 
+    # ── ENRICHISSEMENT : CONTEXTE LOCAL ──
+    # 1. Proximité Transports & Écoles
+    prox = query(
+        """
+        SELECT 
+            ROUND(AVG(dist_gare_m))::integer as avg_dist_gare_m,
+            ROUND(AVG(dist_ecole_m))::integer as avg_dist_ecole_m,
+            MIN(dist_gare_m) as min_dist_gare_m,
+            MIN(dist_ecole_m) as min_dist_ecole_m
+        FROM transactions
+        WHERE commune_code = %s AND est_valide = TRUE
+        """,
+        (commune_code,),
+        fetchone=True
+    ) or {}
+
+    # 2. Exposition au Bruit Aéroport (PEB)
+    noise = query(
+        """
+        SELECT 
+            ROUND(COALESCE(COUNT(CASE WHEN peb_zone IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 0)::numeric, 1) as peb_pct,
+            STRING_AGG(DISTINCT peb_aeroport, ', ') FILTER (WHERE peb_aeroport IS NOT NULL) as peb_aeroports
+        FROM transactions
+        WHERE commune_code = %s AND est_valide = TRUE
+        """,
+        (commune_code,),
+        fetchone=True
+    ) or {}
+
+    # 3. Profil Socio-Économique (INSEE)
+    socio = query(
+        "SELECT population, revenu_median, taux_chomage FROM communes_stats WHERE commune_code = %s",
+        (commune_code,),
+        fetchone=True
+    ) or {}
+
+    # 4. Distribution DPE Commune (pour comparaison locale)
+    dpe_rows = query(
+        """
+        SELECT dpe_classe, COUNT(*) as count
+        FROM transactions
+        WHERE commune_code = %s AND type_local = %s AND dpe_classe IS NOT NULL AND est_valide = TRUE
+        GROUP BY dpe_classe
+        ORDER BY dpe_classe
+        """,
+        (commune_code, type_local)
+    )
+
+    dpe_dist = {r["dpe_classe"]: int(r["count"]) for r in dpe_rows} if dpe_rows else {}
+
     return jsonify({
         "commune_code":      commune_code,
         "type_local":        type_local,
@@ -78,4 +128,23 @@ def estimer():
         "fourchette_haute":  round(fourchette_haute),
         "nb_comparables":    int(stats["nb_comparables"]),
         "score_deal":        score_deal,
+        
+        # Données enrichies de contexte
+        "proximite": {
+            "avg_dist_gare_m":  prox.get("avg_dist_gare_m"),
+            "avg_dist_ecole_m": prox.get("avg_dist_ecole_m"),
+            "min_dist_gare_m":  prox.get("min_dist_gare_m"),
+            "min_dist_ecole_m": prox.get("min_dist_ecole_m"),
+        },
+        "bruit": {
+            "peb_pct":          float(noise.get("peb_pct") or 0.0),
+            "peb_aeroports":    noise.get("peb_aeroports") or None,
+        },
+        "socio": {
+            "population":       int(socio.get("population") or 0) if socio.get("population") else None,
+            "revenu_median":    float(socio.get("revenu_median") or 0.0) if socio.get("revenu_median") else None,
+            "taux_chomage":     float(socio.get("taux_chomage") or 0.0) if socio.get("taux_chomage") else None,
+        },
+        "dpe_dist": dpe_dist
     })
+
