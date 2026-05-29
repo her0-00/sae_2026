@@ -96,6 +96,16 @@
           </select>
         </div>
         <div class="form-group">
+          <label>Zone PEB (Exposition Bruit)</label>
+          <select id="inp-peb">
+            <option value="">Hors zone (Calme)</option>
+            <option value="A">Zone A — Très forte exposition</option>
+            <option value="B">Zone B — Forte exposition</option>
+            <option value="C">Zone C — Exposition modérée</option>
+            <option value="D">Zone D — Faible exposition</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Prix demandé (€) <span class="text-muted text-sm">optionnel</span></label>
           <input id="inp-prix" type="number" min="0" placeholder="280 000">
         </div>
@@ -192,6 +202,9 @@
 
       const savedEpoque = localStorage.getItem("property_epoque");
       if (savedEpoque) D("inp-epoque").value = savedEpoque;
+
+      const savedPeb = localStorage.getItem("property_peb");
+      if (savedPeb) D("inp-peb").value = savedPeb;
       
       const savedPrix = localStorage.getItem("property_prix");
       if (savedPrix) D("inp-prix").value = savedPrix;
@@ -208,6 +221,7 @@
     D("inp-dpe").addEventListener("change", e => localStorage.setItem("property_dpe", e.target.value));
     D("inp-ges").addEventListener("change", e => localStorage.setItem("property_ges", e.target.value));
     D("inp-epoque").addEventListener("change", e => localStorage.setItem("property_epoque", e.target.value));
+    D("inp-peb").addEventListener("change", e => localStorage.setItem("property_peb", e.target.value));
     D("inp-prix").addEventListener("input", e => localStorage.setItem("property_prix", e.target.value));
 
     // ── Soumission du formulaire ─────────────────────────────────
@@ -227,6 +241,9 @@
       
       const epoque = D("inp-epoque").value;
       if (epoque) body.epoque = epoque;
+
+      const pebZone = D("inp-peb").value;
+      if (pebZone) body.peb_zone = pebZone;
 
       const prixDemande = parseFloat(D("inp-prix").value) || null;
       if (prixDemande) body.prix_demande = prixDemande;
@@ -276,6 +293,7 @@
       const score = est.score_deal;
       const gesClasse = body.ges_classe || "";
       const epoque = body.epoque || "";
+      const pebZone = body.peb_zone || "";
       const pctile = prixDemande ? Math.round((prixDemande / body.surface - est.prix_m2_q25) / (est.prix_m2_q75 - est.prix_m2_q25) * 50 + 25) : null;
       const markerPct = pctile ? Math.max(2, Math.min(98, pctile)) : Math.round((est.prix_m2_median - est.prix_m2_q25) / (est.prix_m2_q75 - est.prix_m2_q25) * 50 + 25);
 
@@ -550,15 +568,18 @@
           </div>
 
           <!-- Exposition Bruit & Aéroport (PEB) -->
-          <div class="dim-card" style="--dim-color:${est.bruit.peb_pct > 0 ? "var(--danger)" : "#16a34a"}">
+          <div class="dim-card" style="--dim-color:${pebZone ? (['A', 'B'].includes(pebZone) ? "var(--danger)" : "var(--warning)") : (est.bruit.peb_pct > 0 ? "var(--danger)" : "#16a34a")}">
             <div class="dim-icon">🔇</div>
             <div class="dim-label">Exposition Nuisances Sonores (PEB)</div>
-            <div class="dim-value">${est.bruit.peb_pct > 0 ? `${est.bruit.peb_pct}% des biens exposés` : "Hors zone d'exposition"}</div>
+            <div class="dim-value">
+              ${pebZone ? `Zone PEB: ${pebZone}` : (est.bruit.peb_pct > 0 ? `${est.bruit.peb_pct}% des biens exposés` : "Hors zone d'exposition")}
+            </div>
             <div class="dim-detail">
+              ${pebZone && est.peb_prix_m2 ? `Impact PEB ${pebZone} : <strong>${fmt(est.peb_prix_m2)}/m²</strong> (${((est.peb_prix_m2 - est.prix_m2_median) / est.prix_m2_median * 100).toFixed(1)}% vs médiane) · ` : ""}
               ${est.bruit.peb_pct > 0 ? `Zone affectée par l'aéroport <strong>${est.bruit.peb_aeroports}</strong>` : "Cette commune est calme et préservée des nuisances aéroportuaires réglementées"}
             </div>
-            <div class="dim-score ${est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "bad" : "ok") : "good"}">
-              ${est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "C" : "B") : "A"}
+            <div class="dim-score ${pebZone ? (['A', 'B'].includes(pebZone) ? "bad" : "ok") : (est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "bad" : "ok") : "good")}">
+              ${pebZone || (est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "C" : "B") : "A")}
             </div>
           </div>
 

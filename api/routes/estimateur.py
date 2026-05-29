@@ -164,6 +164,26 @@ def estimer():
             if const_row and const_row["median"]:
                 epoque_prix_m2 = float(const_row["median"])
 
+    # ── IMPACT ZONE PEB (BRUIT) SPÉCIFIQUE ──
+    peb_prix_m2 = None
+    peb_zone = data.get("peb_zone")
+    if peb_zone:
+        peb_row = query(
+            """
+            SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) as median
+            FROM transactions t
+            WHERE t.commune_code = %s
+              AND t.type_local = %s
+              AND t.est_valide = TRUE
+              AND t.prix_m2 IS NOT NULL
+              AND t.peb_zone = %s
+            """,
+            (commune_code, type_local, peb_zone),
+            fetchone=True
+        )
+        if peb_row and peb_row["median"]:
+            peb_prix_m2 = float(peb_row["median"])
+
     # ── ENRICHISSEMENT : CONTEXTE LOCAL ──
     # 1. Proximité Transports & Écoles
     prox = query(
@@ -232,6 +252,7 @@ def estimer():
         "facture_energie_est": facture_energie_est,
         "ges_prix_m2":         ges_prix_m2,
         "epoque_prix_m2":      epoque_prix_m2,
+        "peb_prix_m2":         peb_prix_m2,
         
         # Données de contexte existantes
         "proximite": {
