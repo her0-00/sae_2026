@@ -465,20 +465,23 @@
 
     chatSendEl.addEventListener("click", sendMessage);
 
-    // ── Envoi du message et appel API ────────────────────────────
+    // ── Envoi du message avec streaming SSE ─────────────────────
     async function sendMessage() {
         const text = chatInputEl.value.trim();
         if (!text) return;
 
         chatInputEl.value = "";
-        
-        // Ajouter le message utilisateur dans le volet et l'historique
-        appendMessage(text, "user");
-        messagesHistory.push({ "role": "user", "content": text });
+        chatInputEl.disabled = true;
+        chatSendEl.disabled = true;
 
-        // Ajouter l'indicateur de frappe
+        appendMessage(text, "user");
+        messagesHistory.push({ role: "user", content: text });
+
         const typingEl = appendTypingIndicator();
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+        let assistantEl = null;
+        let fullContent = "";
 
         try {
             const res = await fetch("/api/chat", {
@@ -488,27 +491,72 @@
             });
 
             if (!res.ok) throw new Error("HTTP " + res.status);
-            const data = await res.json();
-            
-            // Retirer l'indicateur de frappe
-            typingEl.remove();
 
-            if (data.error) {
-                appendMessage("⚠️ *Erreur IA :* " + data.error, "assistant");
-            } else if (data.choices && data.choices[0] && data.choices[0].message) {
-                const aiMsg = data.choices[0].message;
-                appendMessage(aiMsg.content, "assistant");
-                messagesHistory.push({ "role": "assistant", "content": aiMsg.content });
-            } else {
-                appendMessage("Désolé, je rencontre une difficulté pour analyser cette question.", "assistant");
+            // Réponse non-streamée (mode dev sans clés)
+            const contentType = res.headers.get("content-type") || "";
+            if (contentType.includes("application/json")) {
+                typingEl.remove();
+                const data = await res.json();
+                if (data.choices?.[0]?.message) {
+                    const msg = data.choices[0].message.content;
+                    appendMessage(msg, "assistant");
+                    messagesHistory.push({ role: "assistant", content: msg });
+                }
+                return;
             }
-        } catch (err) {
-            typingEl.remove();
-            appendMessage("⚠️ *Erreur de connexion :* Impossible de contacter l'assistant intelligent. Vérifiez que le serveur Flask est bien démarré.", "assistant");
-            console.error(err);
-        }
 
-        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+            // ── Lecture du stream SSE ────────────────────────────
+            typingEl.remove();
+            assistantEl = document.createElement("div");
+            assistantEl.className = "immobi-msg immobi-msg-assistant";
+            chatMessagesEl.appendChild(assistantEl);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop(); // Ligne incomplète → garde pour le prochain chunk
+
+                for (const line of lines) {
+                    if (!line.startsWith("data: ")) continue;
+                    const raw = line.slice(6).trim();
+                    if (raw === "[DONE]") break;
+                    try {
+                        const parsed = JSON.parse(raw);
+                        if (parsed.error) {
+                            assistantEl.innerHTML = parseMarkdown("⚠️ " + parsed.error);
+                            break;
+                        }
+                        if (parsed.c) {
+                            fullContent += parsed.c;
+                            assistantEl.innerHTML = parseMarkdown(fullContent);
+                            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                        }
+                    } catch (_) {}
+                }
+            }
+
+            if (fullContent) {
+                messagesHistory.push({ role: "assistant", content: fullContent });
+            }
+
+        } catch (err) {
+            typingEl?.remove();
+            if (assistantEl) assistantEl.remove();
+            appendMessage("⚠️ *Erreur de connexion.* Vérifiez que le serveur est démarré.", "assistant");
+            console.error(err);
+        } finally {
+            chatInputEl.disabled = false;
+            chatSendEl.disabled = false;
+            chatInputEl.focus();
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        }
     }
 
     function appendMessage(content, role) {
