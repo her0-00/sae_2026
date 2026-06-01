@@ -113,6 +113,10 @@ RÈGLES DE MAPPAGE CRITIQUES ET FILTRES SYSTÉMATIQUES :
    - Toujours filtrer `t.est_valide = TRUE`
    - Toujours normaliser et comparer les noms de communes sans accents en utilisant la fonction `translate()` (qui est la seule disponible en base de données, l'extension unaccent n'étant pas activée) :
      `translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'reze'`
+   - **Cohérence temporelle des prix** : Pour s'aligner sur l'estimateur de la page principale et refléter la valeur récente du marché, restreindre les transactions aux 24 derniers mois :
+     `AND t.date_mutation >= NOW() - INTERVAL '24 months'`
+     Si et seulement si la question est très spécifique ou comporte de nombreux filtres croisés (ce qui risque de renvoyer 0 résultat avec 24 mois), utiliser un intervalle plus large de 5 ans pour avoir un échantillon suffisant :
+     `AND t.date_mutation >= NOW() - INTERVAL '60 months'` (soit 60 mois)
    - Toujours utiliser `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ...)` pour le prix médian.
 
 EXEMPLES :
@@ -128,6 +132,7 @@ WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeee
   AND t.type_local = 'Appartement'
   AND t.est_valide = TRUE
   AND t.prix_m2 IS NOT NULL
+  AND t.date_mutation >= NOW() - INTERVAL '24 months'
 ```
 
 Q: Prix médian appartement T3 au calme de plus de 60m² construit après 2012 à Rezé
@@ -145,6 +150,7 @@ WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeee
   AND d.annee_construction > 2012
   AND t.est_valide = TRUE
   AND t.prix_m2 IS NOT NULL
+  AND t.date_mutation >= NOW() - INTERVAL '60 months'
 ```
 
 Q: Prix d'une maison ancienne de plus de 100m² à Nantes
@@ -160,6 +166,7 @@ WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeee
   AND d.annee_construction < 1949
   AND t.est_valide = TRUE
   AND t.prix_m2 IS NOT NULL
+  AND t.date_mutation >= NOW() - INTERVAL '60 months'
 ```
 
 Q: Appartement Vannes proche gare, distribution DPE
@@ -176,6 +183,7 @@ WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeee
   AND t.prix_m2 IS NOT NULL
   AND t.dist_gare_m <= 1000
   AND t.dpe_classe IS NOT NULL
+  AND t.date_mutation >= NOW() - INTERVAL '24 months'
 GROUP BY t.dpe_classe
 ORDER BY t.dpe_classe
 ```
