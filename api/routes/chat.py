@@ -111,7 +111,8 @@ RÈGLES DE MAPPAGE CRITIQUES ET FILTRES SYSTÉMATIQUES :
 
 6. **Règles SQL de base** :
    - Toujours filtrer `t.est_valide = TRUE`
-   - Toujours utiliser `lower(c.nom_commune) = 'reze'`
+   - Toujours normaliser et comparer les noms de communes sans accents en utilisant la fonction `translate()` (qui est la seule disponible en base de données, l'extension unaccent n'étant pas activée) :
+     `translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'reze'`
    - Toujours utiliser `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ...)` pour le prix médian.
 
 EXEMPLES :
@@ -123,7 +124,7 @@ SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0)
        MAX(EXTRACT(YEAR FROM t.date_mutation))::INT AS annee_max
 FROM transactions t
 JOIN communes_stats c ON t.commune_code = c.commune_code
-WHERE lower(c.nom_commune) = 'vannes'
+WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'vannes'
   AND t.type_local = 'Appartement'
   AND t.est_valide = TRUE
   AND t.prix_m2 IS NOT NULL
@@ -136,7 +137,7 @@ SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0)
 FROM transactions t
 JOIN communes_stats c ON t.commune_code = c.commune_code
 JOIN dpe d ON t.commune_code = d.commune_code AND t.adresse_normalisee = d.adresse_normalisee
-WHERE lower(c.nom_commune) = 'reze'
+WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'reze'
   AND t.type_local = 'Appartement'
   AND t.nb_pieces = 3
   AND t.surface_bati >= 60
@@ -153,7 +154,7 @@ SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0)
 FROM transactions t
 JOIN communes_stats c ON t.commune_code = c.commune_code
 JOIN dpe d ON t.commune_code = d.commune_code AND t.adresse_normalisee = d.adresse_normalisee
-WHERE lower(c.nom_commune) = 'nantes'
+WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'nantes'
   AND t.type_local = 'Maison'
   AND t.surface_bati >= 100
   AND d.annee_construction < 1949
@@ -169,7 +170,7 @@ SELECT t.dpe_classe,
        ROUND(AVG(t.dist_gare_m)::NUMERIC, 0) AS dist_gare_moy_m
 FROM transactions t
 JOIN communes_stats c ON t.commune_code = c.commune_code
-WHERE lower(c.nom_commune) = 'vannes'
+WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'vannes'
   AND t.type_local = 'Appartement'
   AND t.est_valide = TRUE
   AND t.prix_m2 IS NOT NULL
