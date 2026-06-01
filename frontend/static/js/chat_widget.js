@@ -32,10 +32,14 @@
         
         .immobi-chat-window {
             position: fixed;
-            bottom: 96px;
+            bottom: 85px;
             right: 24px;
-            width: 380px;
-            height: 520px;
+            width: 50vw;
+            max-width: 700px;
+            min-width: 380px;
+            height: 70vh;
+            max-height: 620px;
+            min-height: 450px;
             border-radius: 16px;
             background: rgba(15, 23, 42, 0.92);
             backdrop-filter: blur(16px);
@@ -270,13 +274,119 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        @media(max-width: 480px) {
+        @media(max-width: 768px), (max-height: 680px) {
             .immobi-chat-window {
-                width: calc(100% - 32px);
-                height: calc(100% - 110px);
+                width: calc(100% - 32px) !important;
+                height: calc(100% - 110px) !important;
                 bottom: 80px;
                 right: 16px;
+                min-width: 0 !important;
+                max-width: none !important;
+                min-height: 0 !important;
+                max-height: none !important;
             }
+        }
+        
+        /* Premium Table & Visual Comparison Styling */
+        .immobi-table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 0.8rem 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.4);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        .immobi-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            color: #e2e8f0;
+            text-align: left;
+        }
+        .immobi-table th {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(37, 99, 235, 0.2));
+            font-weight: 700;
+            color: #fff;
+            padding: 0.6rem 0.8rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+            text-transform: uppercase;
+            font-size: 0.68rem;
+            letter-spacing: 0.03em;
+        }
+        .immobi-table td {
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+            background: transparent !important; /* Force transparent cells to override main.css */
+        }
+        .immobi-table tr:last-child td {
+            border-bottom: none;
+        }
+        .immobi-table tr:hover {
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+        .immobi-table tr:hover td {
+            background: rgba(255, 255, 255, 0.06) !important; /* Force modern hover to override main.css tr:hover td */
+        }
+        .immobi-bar-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 110px;
+        }
+        .immobi-bar-wrap {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .immobi-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa);
+            border-radius: 2px;
+            width: 0;
+            animation: bar-grow 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @keyframes bar-grow {
+            to { width: var(--fill-width); }
+        }
+        
+        /* Premium Copilot Suggestion Pills */
+        .immobi-chat-suggestions {
+            display: flex;
+            gap: 8px;
+            padding: 0.5rem 1.1rem;
+            border-top: 1px dashed rgba(255, 255, 255, 0.08);
+            background: rgba(15, 23, 42, 0.4);
+            flex-wrap: wrap;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        .immobi-suggestion-pill {
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            color: #c084fc;
+            font-size: 0.74rem;
+            padding: 4px 10px;
+            border-radius: 99px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .immobi-suggestion-pill:hover {
+            background: rgba(124, 58, 237, 0.3);
+            border-color: #a78bfa;
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+        }
+        .immobi-suggestion-pill:active {
+            transform: translateY(0);
         }
     `;
     document.head.appendChild(style);
@@ -324,6 +434,9 @@
             
         // 6. Liens hypertextes [texte](url)
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        
+        // 6.5 Tables Markdown
+        html = parseMarkdownTables(html);
         
         // 7. Listes ordonnées et non-ordonnées
         const lines = html.split('\n');
@@ -402,6 +515,135 @@
         return html;
     }
 
+    // ── Tableaux & Barres de Comparaison Visuelle ─────────────────
+    function parseMarkdownTables(text) {
+        if (!text) return "";
+        const lines = text.split('\n');
+        let inTable = false;
+        let tableRows = [];
+        let outputLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('|') && line.endsWith('|')) {
+                if (!inTable) {
+                    inTable = true;
+                    tableRows = [];
+                }
+                tableRows.push(line);
+            } else {
+                if (inTable) {
+                    outputLines.push(renderStyledTable(tableRows));
+                    inTable = false;
+                }
+                outputLines.push(lines[i]);
+            }
+        }
+        if (inTable) {
+            outputLines.push(renderStyledTable(tableRows));
+        }
+        return outputLines.join('\n');
+    }
+
+    function renderStyledTable(rows) {
+        if (rows.length < 2) return rows.join('\n');
+        
+        // Parse headers
+        const headers = rows[0]
+            .split('|')
+            .map(x => x.trim())
+            .filter((x, idx, arr) => idx > 0 && idx < arr.length - 1);
+            
+        let dataStartIndex = 1;
+        if (rows[1] && rows[1].replace(/[\s|:-]/g, '') === '') {
+            dataStartIndex = 2;
+        }
+        
+        // Parse data rows
+        const data = [];
+        for (let i = dataStartIndex; i < rows.length; i++) {
+            const cells = rows[i]
+                .split('|')
+                .map(x => x.trim())
+                .filter((x, idx, arr) => idx > 0 && idx < arr.length - 1);
+            if (cells.length > 0) {
+                data.push(cells);
+            }
+        }
+        
+        if (data.length === 0) return rows.join('\n');
+        
+        // Analyse des colonnes pour trouver des métriques numériques à comparer
+        const maxValues = {};
+        const colIsNumeric = {};
+        
+        headers.forEach((header, colIdx) => {
+            const lowerHeader = header.toLowerCase();
+            if (
+                lowerHeader.includes('m²') ||
+                lowerHeader.includes('m2') ||
+                lowerHeader.includes('prix') ||
+                lowerHeader.includes('médiane') ||
+                lowerHeader.includes('budget') ||
+                lowerHeader.includes('valeur') ||
+                lowerHeader.includes('€') ||
+                lowerHeader.includes('ventes')
+            ) {
+                let numbers = data.map(row => {
+                    const cell = row[colIdx] || '';
+                    const cleanCell = cell.replace(/\s(?=\d)/g, '').replace(/&nbsp;/g, '');
+                    const match = cleanCell.match(/\d+/);
+                    return match ? parseInt(match[0], 10) : null;
+                }).filter(x => x !== null);
+                
+                if (numbers.length > 0) {
+                    colIsNumeric[colIdx] = true;
+                    maxValues[colIdx] = Math.max(...numbers);
+                }
+            }
+        });
+        
+        // Génération du tableau HTML stylisé
+        let html = '<div class="immobi-table-container"><table class="immobi-table">';
+        
+        // En-tête
+        html += '<thead><tr>';
+        headers.forEach(h => {
+            html += `<th>${h}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+        
+        // Données
+        data.forEach(row => {
+            html += '<tr>';
+            headers.forEach((_, colIdx) => {
+                const cellVal = row[colIdx] || '';
+                if (colIsNumeric[colIdx] && maxValues[colIdx] > 0) {
+                    const cleanCell = cellVal.replace(/\s(?=\d)/g, '').replace(/&nbsp;/g, '');
+                    const match = cleanCell.match(/\d+/);
+                    const numVal = match ? parseInt(match[0], 10) : null;
+                    if (numVal !== null) {
+                        const pct = Math.min(100, Math.round((numVal / maxValues[colIdx]) * 100));
+                        html += `<td>
+                            <div class="immobi-bar-cell">
+                                <div><strong>${cellVal}</strong></div>
+                                <div class="immobi-bar-wrap">
+                                    <div class="immobi-bar-fill" style="--fill-width: ${pct}%"></div>
+                                </div>
+                            </div>
+                        </td>`;
+                        return;
+                    }
+                }
+                html += `<td>${cellVal}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        return html;
+    }
+
     // ── Construction du DOM du Widget ─────────────────────────────
     const chatBubble = document.createElement("div");
     chatBubble.className = "immobi-chat-bubble";
@@ -415,11 +657,15 @@
                 <h3 class="immobi-chat-title"><span class="pulse-dot"></span> ImmoBI Copilot</h3>
                 <div class="immobi-chat-subtitle">Assistant IA connecté à la Base de Données</div>
             </div>
-            <button class="immobi-chat-close" title="Fermer">✕</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="immobi-chat-clear" title="Réinitialiser le chat" style="color: #94a3b8; font-size: 1rem; cursor: pointer; border: none; background: none; padding: 4px; transition: color 0.15s;">🗑️</button>
+                <button class="immobi-chat-close" title="Fermer">✕</button>
+            </div>
         </div>
         <div class="immobi-chat-messages" id="immobi-chat-messages">
             <div class="immobi-msg immobi-msg-assistant" data-markdown="**ImmoBI Copilot** — outil de négociation immobilière 🏠&#10;&#10;Posez une question précise, obtenez un verdict chiffré :&#10;&#10;- *« Appartement 65m² à 280 000€ à Vannes, c'est négociable ? »*&#10;- *« Quels leviers de négo pour une maison DPE F à Lorient ? »*&#10;- *« Prix du marché appartement proche gare à Hennebont »*"></div>
         </div>
+        <div class="immobi-chat-suggestions" id="immobi-chat-suggestions" style="display: none;"></div>
         <div class="immobi-chat-input-panel">
             <input type="text" class="immobi-chat-input" id="immobi-chat-input" placeholder="Posez une question sur Vannes, Hennebont..." autocomplete="off">
             <button class="immobi-chat-send" id="immobi-chat-send">➔</button>
@@ -430,9 +676,19 @@
     document.body.appendChild(chatWindow);
 
     // ── Variables d'état conversationnel ──────────────────────────
-    let isWindowOpen = false;
+    let isWindowOpen = localStorage.getItem("immobi_chat_open") === "true";
     let messagesHistory = [];
+    try {
+        const savedHistory = localStorage.getItem("immobi_chat_history");
+        if (savedHistory) {
+            messagesHistory = JSON.parse(savedHistory);
+        }
+    } catch (e) {
+        console.error("Erreur lors de la lecture de l'historique de chat", e);
+    }
+
     const chatMessagesEl = document.getElementById("immobi-chat-messages");
+    const chatSuggestionsEl = document.getElementById("immobi-chat-suggestions");
     const chatInputEl = document.getElementById("immobi-chat-input");
     const chatSendEl = document.getElementById("immobi-chat-send");
 
@@ -444,28 +700,138 @@
         firstMsg.innerHTML = parseMarkdown(md);
     }
 
+    // Restaurer l'historique dans le DOM
+    if (messagesHistory.length > 0) {
+        messagesHistory.forEach(msg => {
+            appendMessage(msg.content, msg.role === "assistant" ? "assistant" : "user");
+        });
+    }
+
     // ── Gestionnaires d'évènements ────────────────────────────────
     chatBubble.addEventListener("click", () => {
         isWindowOpen = !isWindowOpen;
+        localStorage.setItem("immobi_chat_open", isWindowOpen);
         if (isWindowOpen) {
-            chatWindow.classList.add("open");
-            chatBubble.innerHTML = "✕";
-            chatBubble.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
-            chatBubble.style.boxShadow = "0 4px 16px rgba(239, 68, 68, 0.4)";
-            chatInputEl.focus();
+            openWindow();
         } else {
             closeWindow();
         }
     });
 
-    chatWindow.querySelector(".immobi-chat-close").addEventListener("click", closeWindow);
+    chatWindow.querySelector(".immobi-chat-close").addEventListener("click", () => {
+        closeWindow();
+    });
+
+    chatWindow.querySelector(".immobi-chat-clear").addEventListener("click", () => {
+        if (confirm("Voulez-vous réinitialiser l'historique de discussion ?")) {
+            messagesHistory = [];
+            localStorage.removeItem("immobi_chat_history");
+            const messages = chatMessagesEl.querySelectorAll(".immobi-msg");
+            messages.forEach((msg, idx) => {
+                if (idx > 0) msg.remove(); // Garde seulement le message de bienvenue initial
+            });
+            chatMessagesEl.scrollTop = 0;
+        }
+    });
+
+    function openWindow() {
+        chatWindow.classList.add("open");
+        chatBubble.innerHTML = "✕";
+        chatBubble.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
+        chatBubble.style.boxShadow = "0 4px 16px rgba(239, 68, 68, 0.4)";
+        chatInputEl.focus();
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
 
     function closeWindow() {
         isWindowOpen = false;
+        localStorage.setItem("immobi_chat_open", "false");
         chatWindow.classList.remove("open");
         chatBubble.innerHTML = "💬";
         chatBubble.style.background = "linear-gradient(135deg, #7c3aed, #2563eb)";
         chatBubble.style.boxShadow = "0 4px 16px rgba(124, 58, 237, 0.4)";
+    }
+
+    // Ouverture automatique lors du rechargement de la page si l'état était ouvert
+    if (isWindowOpen) {
+        openWindow();
+    }
+
+    // ── Connexion intelligente avec la carte (localStorage) ───
+    let currentCommune = localStorage.getItem("selected_commune_name") || "";
+    let previousCommune = "";
+
+    function updatePills(communeName) {
+        if (!communeName) {
+            chatSuggestionsEl.style.display = "none";
+            chatInputEl.placeholder = "Posez une question sur Vannes, Hennebont...";
+            return;
+        }
+
+        communeName = communeName.toUpperCase();
+        chatInputEl.placeholder = `Poser une question sur ${communeName}...`;
+
+        if (currentCommune && currentCommune.toUpperCase() !== communeName) {
+            previousCommune = currentCommune.toUpperCase();
+        }
+        currentCommune = communeName;
+
+        chatSuggestionsEl.innerHTML = "";
+        
+        const pills = [
+            { text: `📍 Analyser ${communeName}`, prompt: `Analyser le marché à ${communeName}` }
+        ];
+
+        if (previousCommune && previousCommune !== currentCommune) {
+            pills.push({ 
+                text: `⚖️ Comparer avec ${previousCommune}`, 
+                prompt: `Je veux acheter un bien à ${communeName} ou à ${previousCommune}, fais-moi une comparaison complète.` 
+            });
+        }
+
+        pills.forEach(p => {
+            const pill = document.createElement("div");
+            pill.className = "immobi-suggestion-pill";
+            pill.innerHTML = p.text;
+            pill.addEventListener("click", () => {
+                chatInputEl.value = p.prompt;
+                sendMessage();
+            });
+            chatSuggestionsEl.appendChild(pill);
+        });
+
+        chatSuggestionsEl.style.display = "flex";
+        
+        // Ajuster le défilement si nécessaire
+        setTimeout(() => {
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        }, 100);
+    }
+
+    // Intercepter setItem pour détecter les clics sur la carte en temps réel
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function(key, value) {
+        originalSetItem.apply(this, arguments);
+        if (key === "selected_commune_name") {
+            window.dispatchEvent(new CustomEvent("immobiCommuneChanged", { detail: value }));
+        }
+    };
+
+    // Écouter les évènements de changement de commune
+    window.addEventListener("immobiCommuneChanged", (e) => {
+        updatePills(e.detail);
+    });
+
+    // Écouter les changements inter-pages
+    window.addEventListener("storage", (e) => {
+        if (e.key === "selected_commune_name") {
+            updatePills(e.newValue);
+        }
+    });
+
+    // Initialisation
+    if (currentCommune) {
+        updatePills(currentCommune);
     }
 
     chatInputEl.addEventListener("keydown", (e) => {
@@ -485,6 +851,7 @@
 
         appendMessage(text, "user");
         messagesHistory.push({ role: "user", content: text });
+        localStorage.setItem("immobi_chat_history", JSON.stringify(messagesHistory));
 
         const typingEl = appendTypingIndicator();
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
@@ -510,6 +877,7 @@
                     const msg = data.choices[0].message.content;
                     appendMessage(msg, "assistant");
                     messagesHistory.push({ role: "assistant", content: msg });
+                    localStorage.setItem("immobi_chat_history", JSON.stringify(messagesHistory));
                 }
                 return;
             }
@@ -553,6 +921,7 @@
 
             if (fullContent) {
                 messagesHistory.push({ role: "assistant", content: fullContent });
+                localStorage.setItem("immobi_chat_history", JSON.stringify(messagesHistory));
             }
 
         } catch (err) {
