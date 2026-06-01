@@ -63,6 +63,7 @@
     const fmt = n => n == null ? "—" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
     const fmtN = n => n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n);
     const fmtP = n => (n == null || n === "") ? "—" : parseFloat(n).toFixed(1) + " %";
+    const fmtDate = s => { if (!s) return s; const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }); };
     const D = id => document.getElementById(id);
 
     function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
@@ -396,12 +397,12 @@
           const yMax = Math.ceil((vMax + padding) / 100) * 100;
           charts["chart-tend"] = new Chart(D("chart-tend").getContext("2d"), {
             type: "line",
-            data: { labels: tend.map(t => t.trimestre), datasets: [{ label: "Prix /m²", data: tend.map(t => t.prix_m2_median), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.08)", fill: true, tension: .3, pointRadius: 4, pointHoverRadius: 6 }] },
+            data: { labels: tend.map(t => fmtDate(t.trimestre)), datasets: [{ label: "Prix /m²", data: tend.map(t => t.prix_m2_median), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.08)", fill: true, tension: .3, pointRadius: 4, pointHoverRadius: 6 }] },
             options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => Math.round(ctx.parsed.y) + " €/m²" } } }, scales: { y: { min: yMin, max: yMax, ticks: { callback: v => v.toLocaleString("fr-FR") + " €", maxTicksLimit: 8 }, grid: { color: "#f0f0f0" } } }, responsive: true, maintainAspectRatio: false }
           });
           charts["chart-vol"] = new Chart(D("chart-vol").getContext("2d"), {
             type: "bar",
-            data: { labels: tend.map(t => t.trimestre), datasets: [{ label: "Transactions", data: tend.map(t => t.nb_transactions), backgroundColor: "rgba(37,99,235,.5)", borderRadius: 4 }] },
+            data: { labels: tend.map(t => fmtDate(t.trimestre)), datasets: [{ label: "Transactions", data: tend.map(t => t.nb_transactions), backgroundColor: "rgba(37,99,235,.5)", borderRadius: 4 }] },
             options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: "#f0f0f0" } } }, responsive: true, maintainAspectRatio: false }
           });
         }
