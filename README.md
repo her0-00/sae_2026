@@ -256,4 +256,3 @@ flask --app "api:create_app" run --debug
 
 ---
 
-*Projet SAE 2026 — IUT Informatique*
