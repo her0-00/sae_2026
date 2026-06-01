@@ -77,6 +77,43 @@ Réponds UNIQUEMENT avec la requête SQL entre balises ```sql ```. Aucun autre t
 
 {_SCHEMA}
 
+RÈGLES DE MAPPAGE CRITIQUES ET FILTRES SYSTÉMATIQUES :
+1. **Type de logement (type_local)** :
+   - Si la question contient "appartement", "appart", "studio", "chambre" -> TOUJOURS filtrer `t.type_local = 'Appartement'`
+   - Si la question contient "maison", "pavillon", "villa" -> TOUJOURS filtrer `t.type_local = 'Maison'`
+   - Si la question contient "local", "bureau", "commerce" -> TOUJOURS filtrer `t.type_local = 'Local'`
+
+2. **Nombre de pièces (nb_pieces)** :
+   - "studio", "T1", "1 pièce" -> `t.nb_pieces = 1`
+   - "T2", "2 pièces" -> `t.nb_pieces = 2`
+   - "T3", "3 pièces" -> `t.nb_pieces = 3`
+   - "T4", "4 pièces" -> `t.nb_pieces = 4`
+   - "T5+", "5 pièces et plus" -> `t.nb_pieces >= 5`
+
+3. **Surface habitable (surface_bati)** :
+   - "plus de X m²", "au moins X m²" -> `t.surface_bati >= X`
+   - "moins de X m²", "maximum X m²" -> `t.surface_bati <= X`
+   - "environ X m²", "X m²" -> `t.surface_bati BETWEEN X - 10 AND X + 10`
+
+4. **Nuisance sonore / Zone PEB (peb_zone)** :
+   - "au calme", "loin du bruit", "sans bruit", "pas de bruit", "hors zone aéroport" -> TOUJOURS filtrer `t.peb_zone IS NULL`
+   - "bruyant", "exposé au bruit", "zone aéroport", "sous aéroport" -> `t.peb_zone IS NOT NULL`
+
+5. **Époque de construction (dpe.annee_construction)** :
+   - Si la question mentionne une époque, une année ou un âge de construction, faire obligatoirement un `JOIN dpe d ON t.commune_code = d.commune_code AND t.adresse_normalisee = d.adresse_normalisee` et filtrer sur `d.annee_construction` :
+     * "ancien", "très ancien", "avant 1949" -> `d.annee_construction < 1949`
+     * "après-guerre", "1949-1974" -> `d.annee_construction BETWEEN 1949 AND 1974`
+     * "années 70/80", "1975-1989" -> `d.annee_construction BETWEEN 1975 AND 1989`
+     * "années 90", "1990-2000" -> `d.annee_construction BETWEEN 1990 AND 2000`
+     * "années 2000", "2001-2012" -> `d.annee_construction BETWEEN 2001 AND 2012`
+     * "récent", "après 2012" -> `d.annee_construction > 2012`
+     * "neuf", "récent (>=2020)" -> `d.annee_construction >= 2020`
+
+6. **Règles SQL de base** :
+   - Toujours filtrer `t.est_valide = TRUE`
+   - Toujours utiliser `lower(c.nom_commune) = 'reze'`
+   - Toujours utiliser `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ...)` pour le prix médian.
+
 EXEMPLES :
 
 Q: Prix médian appartement à Vannes
@@ -88,6 +125,38 @@ FROM transactions t
 JOIN communes_stats c ON t.commune_code = c.commune_code
 WHERE lower(c.nom_commune) = 'vannes'
   AND t.type_local = 'Appartement'
+  AND t.est_valide = TRUE
+  AND t.prix_m2 IS NOT NULL
+```
+
+Q: Prix médian appartement T3 au calme de plus de 60m² construit après 2012 à Rezé
+```sql
+SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) AS prix_m2_median,
+       COUNT(*) AS nb_transactions
+FROM transactions t
+JOIN communes_stats c ON t.commune_code = c.commune_code
+JOIN dpe d ON t.commune_code = d.commune_code AND t.adresse_normalisee = d.adresse_normalisee
+WHERE lower(c.nom_commune) = 'reze'
+  AND t.type_local = 'Appartement'
+  AND t.nb_pieces = 3
+  AND t.surface_bati >= 60
+  AND t.peb_zone IS NULL
+  AND d.annee_construction > 2012
+  AND t.est_valide = TRUE
+  AND t.prix_m2 IS NOT NULL
+```
+
+Q: Prix d'une maison ancienne de plus de 100m² à Nantes
+```sql
+SELECT ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.prix_m2)::NUMERIC, 0) AS prix_m2_median,
+       COUNT(*) AS nb_transactions
+FROM transactions t
+JOIN communes_stats c ON t.commune_code = c.commune_code
+JOIN dpe d ON t.commune_code = d.commune_code AND t.adresse_normalisee = d.adresse_normalisee
+WHERE lower(c.nom_commune) = 'nantes'
+  AND t.type_local = 'Maison'
+  AND t.surface_bati >= 100
+  AND d.annee_construction < 1949
   AND t.est_valide = TRUE
   AND t.prix_m2 IS NOT NULL
 ```
@@ -108,22 +177,6 @@ WHERE lower(c.nom_commune) = 'vannes'
   AND t.dpe_classe IS NOT NULL
 GROUP BY t.dpe_classe
 ORDER BY t.dpe_classe
-```
-
-Q: Évolution prix maison Lorient 3 ans
-```sql
-SELECT DATE_TRUNC('year', date_mutation)::DATE AS annee,
-       COUNT(*) AS nb_ventes,
-       ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY prix_m2)::NUMERIC, 0) AS prix_m2_median
-FROM transactions t
-JOIN communes_stats c ON t.commune_code = c.commune_code
-WHERE lower(c.nom_commune) = 'lorient'
-  AND t.type_local = 'Maison'
-  AND t.est_valide = TRUE
-  AND t.prix_m2 IS NOT NULL
-  AND t.date_mutation >= NOW() - INTERVAL '3 years'
-GROUP BY annee
-ORDER BY annee
 ```
 """
 
