@@ -1,8 +1,10 @@
 # ImmoBI — Analyse du Marché Immobilier Français
 ## *Pipeline de données géospatiales · API REST · Interface analytique · Assistant IA*
 
-> **Projet SAE 2026** | Python · PostgreSQL/PostGIS · Flask · Dagster · Azure OpenAI
+> **Projet SAE 2026** | Python · PostgreSQL/PostGIS · Flask · Dagster · Azure OpenAI  
 > Données ouvertes : DVF · ADEME · INSEE · IGN · OSM · DGAC
+
+🌐 **Application en ligne : [https://sae-2026-app.onrender.com](https://sae-2026-app.onrender.com)**
 
 ---
 
