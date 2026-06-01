@@ -47,7 +47,7 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
 
 **communes_stats** (données territoriales INSEE) :
   commune_code   TEXT     -- code INSEE
-  nom_commune    TEXT     -- nom en MAJUSCULES ex: 'VANNES', 'LORIENT', 'HENNEBONT'
+  nom_commune    TEXT     -- nom en casse mixte ex: 'Vannes', 'Lorient', 'Bouvron', 'Hennebont'
   departement_code TEXT   -- ex: '56', '29', '35'
   population     INT
   revenu_median  DECIMAL  -- revenu médian annuel €
@@ -64,7 +64,7 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
   annee_dpe          INT
 
 RÈGLES CRITIQUES :
-- nom_commune est en MAJUSCULES → utiliser lower(nom_commune) = 'vannes' pour chercher
+- nom_commune est en **casse mixte** (ex: 'Vannes', 'Bouvron') → TOUJOURS utiliser lower(nom_commune) pour comparer
 - Toujours filtrer: WHERE est_valide = TRUE (sur transactions)
 - Toujours utiliser PERCENTILE_CONT(0.5) pour les médianes (jamais AVG pour les prix)
 - Limiter avec LIMIT 50 maximum
