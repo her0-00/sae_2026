@@ -129,7 +129,7 @@
     const fmt = n => n == null ? "—" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
     const fmtN = n => n == null ? "—" : new Intl.NumberFormat("fr-FR").format(n);
     const fmtPct = n => n == null ? "—" : parseFloat(n).toFixed(1) + " %";
-    const fmtDate = s => { if (!s) return s; const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }); };
+    const fmtDate = s => { if (!s) return s; const p = String(s).split(/[-T ]/); const m = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']; const mo = parseInt(p[1]); return (mo >= 1 && mo <= 12) ? m[mo-1] + ' ' + p[0] : s; };
     const D = id => document.getElementById(id);
 
     function debounce(fn, ms = 250) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) } }
