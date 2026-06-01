@@ -2,6 +2,7 @@ import psycopg2
 import psycopg2.extras
 from contextlib import contextmanager
 from decimal import Decimal
+from datetime import date, datetime
 from flask import current_app
 import json
 
@@ -24,10 +25,14 @@ def get_db():
 
 
 def _cast_row(row):
-    """Convertit les Decimal en float dans un dict."""
+    """Convertit les Decimal en float et les dates en string ISO."""
     if row is None:
         return None
-    return {k: float(v) if isinstance(v, Decimal) else v for k, v in row.items()}
+    def _cast(v):
+        if isinstance(v, Decimal): return float(v)
+        if isinstance(v, (date, datetime)): return v.isoformat()
+        return v
+    return {k: _cast(v) for k, v in row.items()}
 
 
 def query(sql, params=None, fetchone=False):
