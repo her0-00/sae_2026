@@ -530,7 +530,8 @@
               ${gesClasse && est.ges_prix_m2 ? `Impact GES : <strong>${fmt(est.ges_prix_m2)}/m²</strong> (${((est.ges_prix_m2 - est.prix_m2_median) / est.prix_m2_median * 100).toFixed(1)}% vs médiane) · ` : ""}
               ${dpeInsight || (dpe.length ? "Impact énergie disponible — voir fiche commune" : "DPE non disponible")}
             </div>
-            <div class="dim-score ${dpeClasse ? (['A', 'B', 'C'].includes(dpeClasse) ? 'good' : ['D', 'E'].includes(dpeClasse) ? 'ok' : 'bad') : 'na'}">
+            <div class="dim-score ${dpeClasse ? (['A', 'B', 'C'].includes(dpeClasse) ? 'good' : ['D', 'E'].includes(dpeClasse) ? 'ok' : 'bad') : 'na'}"
+                 title="${dpeClasse ? (['A', 'B', 'C'].includes(dpeClasse) ? 'Performance excellente/bonne (Classe ' + dpeClasse + ')' : ['D', 'E'].includes(dpeClasse) ? 'Performance moyenne (Classe ' + dpeClasse + ')' : 'Passoire thermique (Classe ' + dpeClasse + ' : travaux à prévoir, décote de 8 à 15%)') : 'Classe DPE non disponible pour ce bien'}">
               ${dpeClasse || "?"}
             </div>
           </div>
@@ -543,7 +544,8 @@
             <div class="dim-detail">
               ${est.epoque_prix_m2 ? `Prix moyen époque : <strong>${fmt(est.epoque_prix_m2)}/m²</strong> (${((est.epoque_prix_m2 - est.prix_m2_median) / est.prix_m2_median * 100).toFixed(1)}% vs médiane commune)` : "Sélectionnez une époque pour analyser son impact sur le prix"}
             </div>
-            <div class="dim-score ${epoque ? 'ok' : 'na'}">
+            <div class="dim-score ${epoque ? 'ok' : 'na'}"
+                 title="${epoque ? 'Époque de construction renseignée : ' + epoque : 'Époque de construction non renseignée'}">
               ${epoque ? '🏛️' : '?'}
             </div>
           </div>
@@ -554,7 +556,8 @@
             <div class="dim-label">Transport & Écoles</div>
             <div class="dim-value">Min : ${est.proximite.min_dist_gare_m != null ? fmtN(est.proximite.min_dist_gare_m) + ' m (Gare)' : 'Non dispo'}</div>
             <div class="dim-detail">Moy. Gare : ${est.proximite.avg_dist_gare_m != null ? fmtN(est.proximite.avg_dist_gare_m) + ' m' : '—'} · École : ${est.proximite.min_dist_ecole_m != null ? fmtN(est.proximite.min_dist_ecole_m) + ' m' : '—'}</div>
-            <div class="dim-score ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "good" : est.proximite.min_dist_gare_m < 1500 ? "ok" : "bad") : "na"}">
+            <div class="dim-score ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "good" : est.proximite.min_dist_gare_m < 1500 ? "ok" : "bad") : "na"}"
+                 title="${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? 'A : Très proche d\'une gare (< 500m)' : est.proximite.min_dist_gare_m < 1500 ? 'B : Proximité correcte d\'une gare (500m - 1.5km)' : 'C : Éloigné d\'une gare (>= 1.5km)') : 'Données de proximité non disponibles'}">
               ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "A" : est.proximite.min_dist_gare_m < 1500 ? "B" : "C") : "?"}
             </div>
           </div>
@@ -565,7 +568,8 @@
             <div class="dim-label">Contexte socio-économique</div>
             <div class="dim-value">${est.socio.revenu_median ? fmt(est.socio.revenu_median) + "/an" : "Données manquantes"}</div>
             <div class="dim-detail">${est.socio.taux_chomage != null ? `Chômage : ${fmtPct(est.socio.taux_chomage)} · ` : ""}${est.socio.population ? fmtN(est.socio.population) + " hab." : ""}</div>
-            <div class="dim-score ${est.socio.revenu_median ? (est.socio.revenu_median > 25000 ? "good" : est.socio.revenu_median > 18000 ? "ok" : "bad") : "na"}">
+            <div class="dim-score ${est.socio.revenu_median ? (est.socio.revenu_median > 25000 ? "good" : est.socio.revenu_median > 18000 ? "ok" : "bad") : "na"}"
+                 title="${est.socio.revenu_median ? (est.socio.revenu_median > 25000 ? 'A : Niveau de vie aisé (Revenu médian > 25 000 €/an)' : est.socio.revenu_median > 18000 ? 'B : Niveau de vie intermédiaire (Revenu médian entre 18 000 et 25 000 €/an)' : 'C : Niveau de vie modeste (Revenu médian < 18 000 €/an)') : 'Données socio-économiques non disponibles'}">
               ${est.socio.revenu_median ? (est.socio.revenu_median > 25000 ? "A" : est.socio.revenu_median > 18000 ? "B" : "C") : "?"}
             </div>
           </div>
@@ -581,7 +585,8 @@
               ${pebZone && est.peb_prix_m2 ? `Impact PEB ${pebZone} : <strong>${fmt(est.peb_prix_m2)}/m²</strong> (${((est.peb_prix_m2 - est.prix_m2_median) / est.prix_m2_median * 100).toFixed(1)}% vs médiane) · ` : ""}
               ${est.bruit.peb_pct > 0 ? `Zone affectée par l'aéroport <strong>${est.bruit.peb_aeroports}</strong>` : "Cette commune est calme et préservée des nuisances aéroportuaires réglementées"}
             </div>
-            <div class="dim-score ${pebZone ? (['A', 'B'].includes(pebZone) ? "bad" : "ok") : (est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "bad" : "ok") : "good")}">
+            <div class="dim-score ${pebZone ? (['A', 'B'].includes(pebZone) ? "bad" : "ok") : (est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "bad" : "ok") : "good")}"
+                 title="${pebZone ? (['A', 'B'].includes(pebZone) ? 'Zone PEB ' + pebZone + ' : Exposition forte aux nuisances sonores aériennes' : 'Zone PEB ' + pebZone + ' : Exposition modérée aux nuisances sonores') : (est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? 'C : Risque notable de nuisances (' + est.bruit.peb_pct + '% de la commune concernée)' : 'B : Faible risque de nuisances (' + est.bruit.peb_pct + '% de la commune concernée)') : 'A : Calme absolu, commune préservée de toute zone de bruit aérien réglementée')}">
               ${pebZone || (est.bruit.peb_pct > 0 ? (est.bruit.peb_pct > 5 ? "C" : "B") : "A")}
             </div>
           </div>
@@ -592,7 +597,8 @@
             <div class="dim-label">Tendance marché</div>
             <div class="dim-value">${tendancePct != null ? `${tendancePct > 0 ? "+" : ""}${tendancePct}% sur 2 ans` : "Données insuffisantes"}</div>
             <div class="dim-detail">${tendances.length ? `${fmtN(tendances.reduce((s, t) => s + (t.nb_transactions || 0), 0))} transactions analysées` : "Historique en cours de chargement"}</div>
-            <div class="dim-score ${tendancePct != null ? (parseFloat(tendancePct) > 5 ? "ok" : parseFloat(tendancePct) < -3 ? "good" : "ok") : "na"}">
+            <div class="dim-score ${tendancePct != null ? (parseFloat(tendancePct) > 5 ? "ok" : parseFloat(tendancePct) < -3 ? "good" : "ok") : "na"}"
+                 title="${tendancePct != null ? (parseFloat(tendancePct) > 5 ? 'Marché dynamique en hausse (+ ' + tendancePct + '% sur 2 ans)' : parseFloat(tendancePct) < -3 ? 'Marché en baisse, opportunité d\'achat (- ' + Math.abs(tendancePct) + '% sur 2 ans)' : 'Marché relativement stable (' + (tendancePct > 0 ? '+' : '') + tendancePct + '% sur 2 ans)') : 'Historique des prix insuffisant pour déterminer la tendance'}">
               ${tendancePct != null ? (parseFloat(tendancePct) > 0 ? "↑" : "↓") : "?"}
             </div>
           </div>
@@ -616,7 +622,7 @@
             <div class="tx-address">${t.adresse || "Adresse non disponible"}</div>
             <div class="tx-price">${fmt(t.valeur_fonciere)}</div>
             <div class="tx-m2" style="color:var(--muted)">${t.prix_m2 ? fmtN(t.prix_m2) + " €/m²" : ""}</div>
-            ${t.dpe_classe ? `<div class="tx-dpe dpe-${t.dpe_classe}">${t.dpe_classe}</div>` : `<div style="width:22px"></div>`}
+            ${t.dpe_classe ? `<div class="tx-dpe dpe-${t.dpe_classe}" title="Diagnostic de Performance Énergétique (DPE) : Classe ${t.dpe_classe}">${t.dpe_classe}</div>` : `<div style="width:22px"></div>`}
           </div>`).join("")}
         </div>`: `<div class="alert alert-info">Aucune transaction récente disponible.</div>`}
       </div>
