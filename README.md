@@ -21,14 +21,17 @@
 
 ---
 
-## Vue d ensemble
+## Vue d'ensemble
 
-**ImmoBI** est un entrepôt de données immobilières multi-sources couvrant le marché français :
+**ImmoBI** est un **entrepôt de données immobilières** (*Data Warehouse*) multi-sources centré sur l'analyse spatiale et statistique du marché immobilier français. Il s'inscrit dans une démarche complète d'ingénierie de la donnée (*data engineering*) couvrant :
 
-- **Pipeline ETL/ELT** orchestré avec Dagster — ingestion de 6 sources, enrichissement spatial PostGIS, contrôle qualité
-- **API REST Flask** — 7 blueprints : estimations, analyses, carte GeoJSON, scoring opportunités, chat IA
-- **Interface analytique** — 5 pages (estimateur, fiche commune, carte choroplèthe, opportunités, architecture)
-- **Assistant IA** — Copilot conversationnel avec génération SQL automatique et streaming temps réel
+- **L'extraction** automatisée de 6 sources de données ouvertes hétérogènes (API REST, fichiers Parquet, GeoJSON, CSV compressé gz)
+- **La transformation** : normalisation des adresses, détection des valeurs aberrantes, jointure spatiale sous PostGIS en deux passes (adresse exacte + proximité GPS 30m)
+- **Le chargement** incrémental et idempotent dans un entrepôt PostgreSQL cloud (Render)
+- **L'exposition** via une API REST modulaire et un frontend analytique interactif
+- **L'assistance IA** : un copilot conversationnel connecté à la base, capable de générer du SQL à la volée et de répondre en streaming temps réel
+
+L'ensemble du pipeline est **orchestré par Dagster** (*Software-Defined Assets*), garantissant la traçabilité, la reprise sur erreur et la reproductibilité des traitements. Chaque département français constitue une partition indépendante, re-déclenchable à tout moment depuis l'interface Dagster sans impacter les autres données.
 
 ---
 
