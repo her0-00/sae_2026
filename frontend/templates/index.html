@@ -512,8 +512,9 @@
             <div class="dim-label">Prix</div>
             <div class="dim-value">${fmt(est.prix_m2_median)} /m² médian</div>
             <div class="dim-detail">${prixDemande ? `Demandé : ${fmt(prixDemande / body.surface)} /m²` : `Surface : ${body.surface} m² → ${fmt(est.prix_estime)}`}</div>
-            <div class="dim-score ${score === "excellent" || score === "bon" ? "good" : score === "correct" ? "ok" : "bad"}">
-              ${score === "excellent" ? "A" : score === "bon" ? "B" : score === "correct" ? "C" : "D"}
+            <div class="dim-score ${prixDemande ? (score === "excellent" || score === "bon" ? "good" : score === "correct" ? "ok" : "bad") : "na"}"
+                 title="${prixDemande ? (score === 'excellent' ? 'A : Excellent deal (<= 25% les moins chers)' : score === 'bon' ? 'B : Bon prix (<= médiane)' : score === 'correct' ? 'C : Prix correct (<= 75% du marché)' : 'D : Cher (> 75% du marché, négocier)') : 'Entrez un prix demandé pour calculer le score de l\'offre'}">
+              ${prixDemande ? (score === "excellent" ? "A" : score === "bon" ? "B" : score === "correct" ? "C" : "D") : "?"}
             </div>
           </div>
 
