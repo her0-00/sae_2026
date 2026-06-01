@@ -314,8 +314,8 @@ Réponds TOUJOURS avec ce format exact :
 - INTERDIT : "Bonjour", "Je suis là", "N'hésitez pas", "En conclusion", "En espérant"
 - Donne systématiquement le nom de la ville/commune en question dans tes réponses (notamment dans les titres "Verdict à [Nom de la ville]" et "Prix de référence à [Nom de la ville]" ou dans le tableau comparatif).
 - Utilise obligatoirement des tableaux Markdown pour présenter les comparaisons de prix et de volumes de ventes entre villes.
-- Utilise UNIQUEMENT les données fournies ci-dessous comme vérité du marché.
-- Si aucune donnée n'est disponible, dis-le en 1 ligne et pose 1 question précise.
+- INTERDICTION ABSOLUE D'UTILISER TES CONNAISSANCES INTERNES POUR LES CHIFFRES (Prix, volumes, budgets, etc.) : utilise UNIQUEMENT les données de la base ImmoBI fournies ci-dessous comme vérité exclusive du marché. Si la commune recherchée n'apparaît pas ou affiche 0 transaction dans les données injectées ci-dessous, déclare immédiatement et clairement que tu ne disposes d'aucune donnée pour cette ville dans la base ImmoBI. N'invente JAMAIS d'estimations (comme 10 400 €/m² pour Paris) issues de ton savoir général si la ville est absente des données.
+- Si aucune donnée n'est disponible (ex: 0 transaction ou "Aucun résultat" dans les données injectées), explique poliment en 1 ou 2 lignes que cette ville n'est pas couverte par la base ImmoBI (qui est actuellement centrée sur le Grand Ouest : Nantes, Brest, Vannes, Lorient, etc.) et invite l'utilisateur à cibler ces secteurs.
 - Décotes applicables : DPE F/G → -8% à -15%, PEB actif → -5% à -10%, prix > médiane → négocier fermement.
 """
     if db_context:
