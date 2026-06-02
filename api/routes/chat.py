@@ -33,6 +33,8 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
   commune_code   TEXT     -- code INSEE de la commune (ex: '56260' pour Vannes)
   date_mutation  DATE     -- date de la vente
   type_local     TEXT     -- 'Appartement', 'Maison', 'Local'
+  adresse        TEXT     -- adresse du bien (ex: '12 RUE DES ALIZES')
+  adresse_normalisee TEXT  -- adresse normalisée du bien
   surface_bati   FLOAT    -- surface habitable en m²
   nb_pieces      INT      -- nombre de pièces
   valeur_fonciere FLOAT   -- prix de vente total en €
@@ -43,6 +45,8 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
   peb_aeroport   TEXT     -- nom de l'aéroport (NULL si hors zone)
   dist_gare_m    FLOAT    -- distance gare la plus proche en mètres
   dist_ecole_m   FLOAT    -- distance école la plus proche en mètres
+  longitude      FLOAT    -- coordonnée géographique longitude du bien
+  latitude       FLOAT    -- coordonnée géographique latitude du bien
   est_valide     BOOLEAN  -- ⚠ TOUJOURS filtrer WHERE est_valide = TRUE
 
 **communes_stats** (données territoriales INSEE) :
@@ -67,7 +71,8 @@ RÈGLES CRITIQUES :
 - nom_commune est en **casse mixte** (ex: 'Vannes', 'Bouvron') → TOUJOURS utiliser lower(nom_commune) pour comparer
 - Toujours filtrer: WHERE est_valide = TRUE (sur transactions)
 - Toujours utiliser PERCENTILE_CONT(0.5) pour les médianes (jamais AVG pour les prix)
-- Limiter avec LIMIT 50 maximum
+- Limites de lignes : Pour les requêtes textuelles classiques, limiter à 50 maximum. Pour les requêtes cartographiques (quand l'utilisateur demande une carte, de situer, ou de localiser), utiliser un LIMIT 1000 et s'assurer de sélectionner latitude et longitude dans le SELECT.
+- Agrégation pour graphiques : Si l'utilisateur demande un graphique, une évolution, une distribution ou une répartition, utiliser des fonctions d'agrégation (comme COUNT(*), AVG(), ou PERCENTILE_CONT(0.5)) et un GROUP BY approprié (par exemple par classe DPE dpe_classe, par type local type_local, ou par trimestre date_trunc('quarter', date_mutation) ou par année). Ne jamais renvoyer des dizaines de lignes individuelles si la question demande une vue d'ensemble ou une comparaison graphique.
 """
 
 _SQL_SYSTEM = f"""Tu es un expert SQL PostgreSQL spécialisé en données immobilières.
@@ -118,6 +123,7 @@ RÈGLES DE MAPPAGE CRITIQUES ET FILTRES SYSTÉMATIQUES :
      Si et seulement si la question est très spécifique ou comporte de nombreux filtres croisés (ce qui risque de renvoyer 0 résultat avec 24 mois), utiliser un intervalle plus large de 5 ans pour avoir un échantillon suffisant :
      `AND t.date_mutation >= NOW() - INTERVAL '60 months'` (soit 60 mois)
    - Toujours utiliser `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ...)` pour le prix médian.
+   - **Géolocalisation & Cartographie** : Si la question demande d'afficher une carte, de situer ou localiser des biens (ou demande des transactions avec coordonnées/repères), tu DOIS obligatoirement inclure `t.latitude`, `t.longitude` et `t.adresse` dans la clause SELECT pour que l'application puisse les positionner et afficher leur adresse.
 
 EXEMPLES :
 
@@ -387,6 +393,114 @@ Réponds TOUJOURS avec ce format exact :
 
 # ── Route principale ───────────────────────────────────────────────────────────
 
+def _generate_widget_config(question: str, sql_used: str, db_results: list[dict], client: AzureOpenAI, deployment: str) -> dict:
+    if not db_results or not sql_used:
+        return {"type": "none"}
+        
+    total_rows = len(db_results)
+    if total_rows <= 30:
+        sample_data = db_results
+    else:
+        sample_data = db_results[:5]
+        
+    context = (
+        f"SQL Query: {sql_used}\n"
+        f"Total rows returned: {total_rows}\n"
+        f"Data sample:\n{json.dumps(sample_data, default=str)}"
+    )
+    
+    system_prompt = """Tu es un expert en visualisation de données immobilières.
+Ta tâche est de concevoir un widget graphique (chart) ou cartographique (map) adéquat à partir des données réelles retournées par la base de données pour répondre à la question de l'utilisateur.
+
+Tu dois impérativement renvoyer un objet JSON strict au format suivant (sans balise ```json, sans texte autour) :
+{
+  "type": "chart" | "map" | "none",
+  "title": "Titre du widget visuel",
+  "chart_config": {
+    "type": "bar" | "line" | "pie" | "doughnut",
+    "labels": ["Label1", "Label2", ...],
+    "datasets": [
+      {
+        "label": "Nom de la série",
+        "data": [valeur1, valeur2, ...]
+      }
+    ]
+  },
+  "map_config": {
+    "center": [latitude, longitude],
+    "zoom": 13,
+    "poi_markers": [
+      {"lat": latitude, "lng": longitude, "popup": "Nom du POI (Aéroport, Gare, Ecole...)"}
+    ]
+  }
+}
+
+Règles de décision visuelle :
+1. Si l'utilisateur demande une évolution temporelle (ex: prix par trimestre, par année) -> "type": "chart" avec "chart_config.type": "line".
+2. Si l'utilisateur demande une comparaison de volumes, de prix moyens, ou de prix médians entre plusieurs groupes -> "type": "chart" avec "chart_config.type": "bar".
+3. Si l'utilisateur demande une répartition de parts ou de pourcentages (ex: répartition par DPE, par type local) -> "type": "chart" avec "chart_config.type": "doughnut" ou "pie".
+4. Si la question demande explicitement une carte ou des localisations géographiques (ou si les données contiennent des latitudes/longitudes et que l'utilisateur veut voir où ils se situent) -> "type": "map". Laisse le centre de la carte à [47.218371, -1.553621] par défaut (Nantes) ou calcule le centre moyen à partir des coordonnées des résultats si tu le peux.
+5. S'il n'y a pas d'intérêt visuel clair ou pas assez de données -> "type": "none".
+"""
+
+    try:
+        resp = _call_llm_sync(
+            client,
+            deployment,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Context data:\n{context}\n\nUser Question: {question}"}
+            ],
+            max_tokens=800,
+            temperature=0.0
+        )
+        raw_json = resp.choices[0].message.content or ""
+        raw_json = raw_json.strip()
+        if raw_json.startswith("```json"):
+            raw_json = raw_json[7:]
+        elif raw_json.startswith("```"):
+            raw_json = raw_json[3:]
+        if raw_json.endswith("```"):
+            raw_json = raw_json[:-3]
+        raw_json = raw_json.strip()
+        
+        parsed = json.loads(raw_json)
+        
+        if parsed.get("type") == "map":
+            markers = []
+            for row in db_results:
+                if row.get("latitude") and row.get("longitude"):
+                    prix = f"{row['prix_m2']} €/m²" if row.get("prix_m2") else ""
+                    dpe = f" | DPE: {row['dpe_classe']}" if row.get("dpe_classe") else ""
+                    valeur = f" | Valeur: {row['valeur_fonciere']} €" if row.get("valeur_fonciere") else ""
+                    type_loc = row.get("type_local", "Bien")
+                    title_info = row.get("adresse") or row.get("adresse_normalisee") or type_loc
+                    popup = f"<b>{title_info}</b><br>{prix}{dpe}{valeur}"
+                    markers.append({
+                        "lat": float(row["latitude"]),
+                        "lng": float(row["longitude"]),
+                        "popup": popup,
+                        "valeur_fonciere": float(row["valeur_fonciere"]) if row.get("valeur_fonciere") is not None else None,
+                        "prix_m2": float(row["prix_m2"]) if row.get("prix_m2") is not None else None,
+                        "dpe_classe": row.get("dpe_classe"),
+                        "surface_bati": float(row["surface_bati"]) if row.get("surface_bati") is not None else None,
+                        "type_local": type_loc,
+                        "adresse": row.get("adresse") or row.get("adresse_normalisee")
+                    })
+            if "map_config" not in parsed:
+                parsed["map_config"] = {}
+            parsed["map_config"]["markers"] = markers
+            
+            if markers:
+                avg_lat = sum(m["lat"] for m in markers) / len(markers)
+                avg_lng = sum(m["lng"] for m in markers) / len(markers)
+                parsed["map_config"]["center"] = [avg_lat, avg_lng]
+                
+        return parsed
+    except Exception as e:
+        log.error("Error creating widget config in chat backend: %s", e)
+        return {"type": "none"}
+
 @bp.post("")
 def chat_copilot():
     data     = request.get_json(force=True) or {}
@@ -416,9 +530,12 @@ def chat_copilot():
     system_prompt = _build_system_prompt(db_context)
     api_messages  = [{"role": "system", "content": system_prompt}] + messages
 
+    widget_config = _generate_widget_config(latest, sql_used, db_results, client, deployment)
+
     # ── Phase 2 : Réponse en streaming ────────────────────────────────────────
     def generate():
         try:
+            yield f"data: {json.dumps({'widget': widget_config})}\n\n"
             try:
                 stream = client.chat.completions.create(
                     model=deployment,
