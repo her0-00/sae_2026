@@ -512,7 +512,7 @@
       ${withLink ? `
         <div style="display:flex; flex-direction:column; gap:0.4rem; margin-top:0.6rem;">
           <a href="/commune?code=${p.commune_code}" class="btn btn-primary btn-sm" style="text-align:center;">Fiche Commune →</a>
-          <button onclick="chargerPois('${p.commune_code}', ${p.lat}, ${p.lng})" class="btn btn-outline btn-sm" style="border-color: #7c3aed; color: #7c3aed;">🚂 Voir Gares & Écoles</button>
+          <button onclick="chargerPois('${p.commune_code}', ${p.lat}, ${p.lng})" class="btn btn-outline btn-sm" style="border-color: #7c3aed; color: #7c3aed;">📍 Voir les équipements</button>
           <button onclick="chargerTransactions(${p.lat}, ${p.lng}, 5)" class="btn btn-outline btn-sm" style="border-color: #dc2626; color: #dc2626;">📍 Voir les ventes réelles</button>
           <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="btn btn-outline btn-sm" style="text-align:center;">🛰️ Google Maps</a>
         </div>
@@ -524,6 +524,19 @@
       const panel = document.getElementById("info-panel");
       panel.innerHTML += `<div style="font-size:.8rem;color:var(--muted); margin-top:.5rem;">Recherche spatiale des équipements...</div>`;
 
+      const POI_STYLE = {
+        gare:        { emoji: '🚂', color: '#7c3aed', label: 'Gare SNCF' },
+        ecole:       { emoji: '🎓', color: '#2563eb', label: 'École' },
+        universite:  { emoji: '🏛️', color: '#0d9488', label: 'Université' },
+        cinema:      { emoji: '🎬', color: '#db2777', label: 'Cinéma' },
+        salle_sport: { emoji: '💪', color: '#ea580c', label: 'Salle de sport' },
+        restaurant:  { emoji: '🍽️', color: '#ca8a04', label: 'Restaurant' },
+        pharmacie:   { emoji: '💊', color: '#16a34a', label: 'Pharmacie' },
+        commerce:    { emoji: '🛒', color: '#0284c7', label: 'Commerce' },
+        transport:   { emoji: '🚌', color: '#6366f1', label: 'Arrêt de bus' },
+        parking:     { emoji: '🚗', color: '#64748b', label: 'Parking' },
+      };
+
       try {
         const res = await fetch(`${API}/api/analyses/pois?commune_code=${commune_code}`);
         if (!res.ok) throw new Error("Erreur de chargement");
@@ -532,20 +545,18 @@
         txLayer.clearLayers();
 
         pois.forEach(p => {
-          const isGare = p.type === 'gare';
-          const iconText = isGare ? '🚂' : '🎓';
-          const markerColor = isGare ? '#7c3aed' : '#2563eb';
+          const style = POI_STYLE[p.type] || { emoji: '📍', color: '#6b7280', label: p.type };
           
           const htmlIcon = L.divIcon({
             className: 'custom-div-icon',
-            html: `<div style="background:${markerColor}; color:white; font-size:0.95rem; padding: 4px; border-radius:50%; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${iconText}</div>`,
+            html: `<div style="background:${style.color}; color:white; font-size:0.95rem; padding: 4px; border-radius:50%; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${style.emoji}</div>`,
             iconSize: [28, 28],
             iconAnchor: [14, 14]
           });
 
           const popupContent = `
             <div style="font-size:0.85rem; line-height:1.4;">
-              <strong style="color:${markerColor}">${isGare ? '🚂 Gare SNCF' : '🎓 Établissement scolaire'}</strong><br>
+              <strong style="color:${style.color}">${style.emoji} ${style.label}</strong><br>
               ${p.nom || 'Sans nom'}<br>
               <span class="text-muted" style="font-size:0.75rem" title="Centroïde géométrique (centre de gravité) de la commune">${fmtN(p.dist_centroid_m)}m du centre de la commune ⓘ</span>
             </div>
@@ -560,7 +571,7 @@
           map.setView([lat, lng], 13);
           panel.innerHTML += `<div style="font-size:.8rem;color:#16a34a; margin-top:.5rem;">${pois.length} équipements affichés sur la carte.</div>`;
         } else {
-          panel.innerHTML += `<div style="font-size:.8rem;color:#dc2626; margin-top:.5rem;">Aucune gare ni école détectée dans les contours de cette commune.</div>`;
+          panel.innerHTML += `<div style="font-size:.8rem;color:#dc2626; margin-top:.5rem;">Aucun équipement détecté dans les contours de cette commune.</div>`;
         }
       } catch (e) {
         console.error(e);
@@ -714,7 +725,7 @@
 
     document.getElementById("btn-load").addEventListener("click", chargerCarte);
   </script>
-  <script src="/static/js/chat_widget.js" defer></script>
+  <script src="/static/js/chat_widget.js?v=4" defer></script>
 </body>
 
 </html>

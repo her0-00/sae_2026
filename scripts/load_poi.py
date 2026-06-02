@@ -107,22 +107,57 @@ def overpass_query(query: str, retries: int = 3) -> list:
     return []
 
 
-def inserer_ecoles(elements: list, conn) -> int:
+def inserer_poi_osm(elements: list, conn) -> int:
     batch = []
     for el in elements:
         lat = el.get("lat") or (el.get("center") or {}).get("lat")
         lng = el.get("lon") or (el.get("center") or {}).get("lon")
         if not lat or not lng:
             continue
-        nom = (el.get("tags") or {}).get("name", "")
-        batch.append(("ecole", nom, float(lat), float(lng)))
+
+        tags = el.get("tags") or {}
+        nom = tags.get("name", "")
+
+        poi_type = None
+        if tags.get("amenity") == "school":
+            poi_type = "ecole"
+        elif tags.get("amenity") in ("university", "college"):
+            poi_type = "universite"
+        elif tags.get("amenity") == "cinema":
+            poi_type = "cinema"
+        elif tags.get("leisure") in ("sports_centre", "fitness_centre"):
+            poi_type = "salle_sport"
+        elif tags.get("amenity") in ("restaurant", "fast_food", "cafe"):
+            poi_type = "restaurant"
+        elif tags.get("amenity") == "pharmacy":
+            poi_type = "pharmacie"
+        elif tags.get("shop") in ("bakery", "supermarket", "convenience"):
+            poi_type = "commerce"
+        elif tags.get("highway") == "bus_stop":
+            poi_type = "transport"
+        elif tags.get("amenity") == "parking":
+            poi_type = "parking"
+
+        if not poi_type:
+            continue
+
+        batch.append((poi_type, nom, float(lat), float(lng)))
+
     if not batch:
         return 0
     with conn.cursor() as cur:
         psycopg2.extras.execute_values(
             cur,
-            "INSERT INTO points_interet (type,nom,latitude,longitude,geom) VALUES %s ON CONFLICT DO NOTHING",
-            [(t, n, lat, lng, f"SRID=4326;POINT({lng} {lat})") for t, n, lat, lng in batch],
+            """
+            INSERT INTO points_interet (type, nom, commune_code, latitude, longitude, geom)
+            SELECT v.type, v.nom,
+                   (SELECT commune_code FROM communes_stats WHERE ST_Within(ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326), geom) LIMIT 1),
+                   v.lat, v.lng,
+                   ST_SetSRID(ST_MakePoint(v.lng, v.lat), 4326)
+            FROM (VALUES %s) AS v(type, nom, lat, lng)
+            ON CONFLICT DO NOTHING
+            """,
+            [(t, n, lat, lng) for t, n, lat, lng in batch],
         )
     conn.commit()
     return len(batch)
@@ -141,15 +176,30 @@ def charger_poi(dept: str, toutes_gares: list, conn) -> tuple[int, int]:
     n_g = inserer_gares(gares_dept, conn)
     log.info("[%s] ✓ %d gares SNCF", dept, n_g)
 
-    # Écoles (Overpass)
+    # Écoles + Universités + Cinémas + Salles de sport + Restaurants + Pharmacies + Commerces + Bus + Parkings (Overpass)
     bbox_str = f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}"
     els_e = overpass_query(f"""
-        [out:json][timeout:120];
-        (node["amenity"="school"]({bbox_str});way["amenity"="school"]({bbox_str}););
+        [out:json][timeout:300];
+        (
+          node["amenity"="school"]({bbox_str});
+          way["amenity"="school"]({bbox_str});
+          node["amenity"~"university|college"]({bbox_str});
+          way["amenity"~"university|college"]({bbox_str});
+          node["amenity"="cinema"]({bbox_str});
+          way["amenity"="cinema"]({bbox_str});
+          node["leisure"~"sports_centre|fitness_centre"]({bbox_str});
+          way["leisure"~"sports_centre|fitness_centre"]({bbox_str});
+          node["amenity"~"restaurant|fast_food|cafe"]({bbox_str});
+          node["amenity"="pharmacy"]({bbox_str});
+          node["shop"~"bakery|supermarket|convenience"]({bbox_str});
+          node["highway"="bus_stop"]({bbox_str});
+          node["amenity"="parking"]({bbox_str});
+          way["amenity"="parking"]({bbox_str});
+        );
         out center;
     """)
-    n_e = inserer_ecoles(els_e, conn)
-    log.info("[%s] ✓ %d écoles", dept, n_e)
+    n_e = inserer_poi_osm(els_e, conn)
+    log.info("[%s] ✓ %d POIs OpenStreetMap insérés", dept, n_e)
 
     return n_g, n_e
 
@@ -171,7 +221,7 @@ def main():
             log.error("[%s] %s", dept, ex)
 
     conn.close()
-    log.info("TOTAL %d gares | %d écoles", tot_g, tot_e)
+    log.info("TOTAL %d gares | %d POIs OSM", tot_g, tot_e)
 
 
 if __name__ == "__main__":

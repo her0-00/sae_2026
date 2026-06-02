@@ -67,6 +67,51 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
   annee_construction INT
   annee_dpe          INT
 
+**points_interet** (équipements de proximité géolocalisés — source OpenStreetMap) :
+  id                 SERIAL PRIMARY KEY
+  type               TEXT     -- type d'équipement : 'gare', 'ecole', 'universite', 'cinema', 'salle_sport', 'restaurant', 'pharmacie', 'commerce', 'transport', 'parking'
+  nom                TEXT     -- nom de l'équipement (peut être NULL)
+  commune_code       TEXT     -- code INSEE de la commune (peut être NULL)
+  latitude           FLOAT
+  longitude          FLOAT
+  geom               GEOMETRY(Point, 4326)  -- point géographique PostGIS
+
+  ⚠ Pour filtrer les POI d'une commune : JOIN communes_stats c ON ST_Within(p.geom, c.geom) — NE PAS utiliser departement_code qui n'existe pas.
+  ⚠ Pour toute recherche ou sélection de points d'intérêt (points_interet) : TOUJOURS exclure les points sans nom avec la condition `nom IS NOT NULL AND nom <> ''`.
+
+- Pour trouver un POI par nom et s'en servir comme point de référence spatial : utiliser une sous-requête sur points_interet. Exemple pour trouver des transactions près d'un Basic-Fit à Vannes :
+  ```sql
+  SELECT t.latitude, t.longitude, t.adresse, t.valeur_fonciere, t.type_local, t.dpe_classe, t.prix_m2, t.surface_bati
+  FROM transactions t
+  JOIN communes_stats c ON t.commune_code = c.commune_code
+  WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'vannes'
+    AND t.type_local = 'Appartement'
+    AND t.est_valide = TRUE
+    AND t.date_mutation >= NOW() - INTERVAL '24 months'
+    AND ST_DWithin(
+      t.geom::geography,
+      (SELECT geom::geography FROM points_interet
+       WHERE type = 'salle_sport' AND replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = 'basicfit'
+       ORDER BY geom <-> (SELECT ST_Centroid(geom) FROM communes_stats WHERE lower(nom_commune)='vannes') LIMIT 1),
+      2000
+    )
+  LIMIT 1000
+  ```
+- IMPORTANT : pour les recherches spatiales autour d'un POI, utiliser un rayon de 2000m par défaut.
+- Pour rechercher un POI par nom, normaliser avec `replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '')` et comparer avec le nom sans tirets ni espaces (ex: 'basicfit', 'fitnespark'). Ne JAMAIS utiliser LIKE/ILIKE avec le caractère `%`.
+- Pour tout POI référencé dans points_interet : TOUJOURS utiliser une sous-requête pour récupérer ses coordonnées, ne jamais inventer de coordonnées GPS.
+  - Types disponibles et leur signification :
+    * 'gare' : Gare ferroviaire SNCF
+    * 'ecole' : Établissement scolaire (primaire, collège, lycée)
+    * 'universite' : Université ou grande école
+    * 'cinema' : Cinéma
+    * 'salle_sport' : Salle de sport, gymnase, piscine
+    * 'restaurant' : Restaurant, café, brasserie
+    * 'pharmacie' : Pharmacie
+    * 'commerce' : Supermarché, boulangerie, commerce de proximité
+    * 'transport' : Arrêt de bus ou de tramway
+    * 'parking' : Parking public
+
 RÈGLES CRITIQUES :
 - nom_commune est en **casse mixte** (ex: 'Vannes', 'Bouvron') → TOUJOURS utiliser lower(nom_commune) pour comparer
 - Toujours filtrer: WHERE est_valide = TRUE (sur transactions)
@@ -123,7 +168,9 @@ RÈGLES DE MAPPAGE CRITIQUES ET FILTRES SYSTÉMATIQUES :
      Si et seulement si la question est très spécifique ou comporte de nombreux filtres croisés (ce qui risque de renvoyer 0 résultat avec 24 mois), utiliser un intervalle plus large de 5 ans pour avoir un échantillon suffisant :
      `AND t.date_mutation >= NOW() - INTERVAL '60 months'` (soit 60 mois)
    - Toujours utiliser `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ...)` pour le prix médian.
-   - **Géolocalisation & Cartographie** : Si la question demande d'afficher une carte, de situer ou localiser des biens (ou demande des transactions avec coordonnées/repères), tu DOIS obligatoirement inclure `t.latitude`, `t.longitude`, `t.adresse`, `t.valeur_fonciere`, `t.type_local` et `t.dpe_classe` dans la clause SELECT pour que l'application puisse les positionner, afficher leur adresse et permettre le filtrage interactif.
+   - **Géolocalisation & Cartographie** :
+     * Pour les transactions, si la question demande d'afficher une carte, de situer ou localiser des biens (ou demande des transactions avec coordonnées/repères), tu DOIS obligatoirement inclure `t.latitude`, `t.longitude`, `t.adresse`, `t.valeur_fonciere`, `t.type_local` et `t.dpe_classe` dans la clause SELECT pour que l'application puisse les positionner, afficher leur adresse et permettre le filtrage interactif.
+     * Pour les points d'intérêt (points_interet), si la question demande de les afficher ou de les situer, tu DOIS obligatoirement inclure `nom`, `latitude`, `longitude` et `type` dans la clause SELECT pour que l'application puisse les positionner, afficher leur nom et utiliser l'icône correcte (ex: gare, ecole, salle_sport, etc.).
 
 EXEMPLES :
 
@@ -278,7 +325,9 @@ def _text_to_sql_with_retry(question: str, client: AzureOpenAI,
                 log.warning("[Text-to-SQL] Requête non-SELECT bloquée: %s", sql[:100])
                 continue
 
-            log.info("[Text-to-SQL] Tentative %d — SQL: %s", attempt + 1, sql[:150])
+            # Le LLM est instruit de ne pas utiliser % dans le SQL généré
+            # On exécute le SQL brut directement
+            print(f"[SQL DEBUG] Tentative {attempt+1}:\n{sql}\n", flush=True)
             results = query(sql)
             log.info("[Text-to-SQL] ✅ Succès — %d lignes", len(results or []))
             return sql, results or [], ""
@@ -380,6 +429,8 @@ Réponds TOUJOURS avec ce format exact :
 ## RÈGLES STRICTES
 - MAX 200 mots (ou 300 mots si comparaison). Zéro remplissage.
 - INTERDIT : "Bonjour", "Je suis là", "N'hésitez pas", "En conclusion", "En espérant"
+- INTERDIT : dire que tu "ne peux pas afficher de carte" — un widget visuel est automatiquement généré en parallèle de ta réponse texte, tu n'as pas besoin de l'afficher toi-même.
+- Si la question demande une carte ou une localisation, confirme simplement que les résultats sont affichés sur la carte (widget à droite) et commente les données chiffrées.
 - Donne systématiquement le nom de la ville/commune en question dans tes réponses (notamment dans les titres "Verdict à [Nom de la ville]" et "Prix de référence à [Nom de la ville]" ou dans le tableau comparatif).
 - Utilise obligatoirement des tableaux Markdown pour présenter les comparaisons de prix et de volumes de ventes entre villes.
 - INTERDICTION ABSOLUE D'UTILISER TES CONNAISSANCES INTERNES POUR LES CHIFFRES (Prix, volumes, budgets, etc.) : utilise UNIQUEMENT les données de la base ImmoBI fournies ci-dessous comme vérité exclusive du marché. Si la commune recherchée n'apparaît pas ou affiche 0 transaction dans les données injectées ci-dessous, déclare immédiatement et clairement que tu ne disposes d'aucune donnée pour cette ville dans la base ImmoBI. N'invente JAMAIS d'estimations (comme 10 400 €/m² pour Paris) issues de ton savoir général si la ville est absente des données.
@@ -430,10 +481,15 @@ Tu dois impérativement renvoyer un objet JSON strict au format suivant (sans ba
     "center": [latitude, longitude],
     "zoom": 13,
     "poi_markers": [
-      {"lat": latitude, "lng": longitude, "popup": "Nom du POI (Aéroport, Gare, Ecole...)"}
+      {"lat": latitude, "lng": longitude, "popup": "Nom du POI de référence", "type": "type_du_poi_si_connu"}
     ]
   }
 }
+
+IMPORTANT POUR LA CARTE :
+Dans "map_config.poi_markers", n'inclure que les points de repère très spécifiques/uniques (par exemple, le centre de la commune ou un POI de référence unique autour duquel on cherche).
+- "type" doit être le type de ce point d'intérêt s'il est connu (ex: 'salle_sport', 'gare', 'ecole', 'universite', 'cinema', 'restaurant', 'pharmacie', 'commerce', 'transport', 'parking'). Cela permet d'afficher l'émoticône appropriée.
+- Ne JAMAIS lister tous les points retournés par la requête SQL dans "poi_markers" car le serveur s'occupe de les ajouter automatiquement sur la carte via une post-analyse. Laisse "poi_markers" vide ([]) par défaut si la question ne demande pas d'afficher un repère précis en plus des biens/POIs.
 
 Règles de décision visuelle :
 1. Si l'utilisateur demande une évolution temporelle (ex: prix par trimestre, par année) -> "type": "chart" avec "chart_config.type": "line".
@@ -451,7 +507,7 @@ Règles de décision visuelle :
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Context data:\n{context}\n\nUser Question: {question}"}
             ],
-            max_tokens=800,
+            max_tokens=1000,
             temperature=0.0
         )
         raw_json = resp.choices[0].message.content or ""
@@ -468,18 +524,32 @@ Règles de décision visuelle :
         
         if parsed.get("type") == "map":
             markers = []
+            seen = set()
             for row in db_results:
                 if row.get("latitude") and row.get("longitude"):
+                    nom = row.get("nom")
+                    poi_type = row.get("type")
+                    
+                    # Exclure les POIs sans nom, mais conserver les transactions (qui n'ont pas de type POI ou pas de nom)
+                    is_poi = poi_type is not None
+                    if is_poi and (not nom or not nom.strip()):
+                        continue
+                        
+                    key = (round(float(row["latitude"]), 5), round(float(row["longitude"]), 5))
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     prix = f"{row['prix_m2']} €/m²" if row.get("prix_m2") else ""
                     dpe = f" | DPE: {row['dpe_classe']}" if row.get("dpe_classe") else ""
                     valeur = f" | Valeur: {row['valeur_fonciere']} €" if row.get("valeur_fonciere") else ""
                     type_loc = row.get("type_local", "Bien")
-                    title_info = row.get("adresse") or row.get("adresse_normalisee") or type_loc
+                    title_info = row.get("nom") or row.get("adresse") or row.get("adresse_normalisee") or type_loc
                     popup = f"<b>{title_info}</b><br>{prix}{dpe}{valeur}"
                     markers.append({
                         "lat": float(row["latitude"]),
                         "lng": float(row["longitude"]),
                         "popup": popup,
+                        "type": poi_type,
                         "valeur_fonciere": float(row["valeur_fonciere"]) if row.get("valeur_fonciere") is not None else None,
                         "prix_m2": float(row["prix_m2"]) if row.get("prix_m2") is not None else None,
                         "dpe_classe": row.get("dpe_classe"),

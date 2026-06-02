@@ -447,39 +447,74 @@
           </div>
         </div>
 
-        <!-- Proximité & Transports -->
+        <!-- Proximité & Transports + Commodités -->
         <div style="margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 1rem;">
           <div class="card-title" style="font-size: 0.8rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 0.6rem;">Services & Proximité</div>
+          
+          <!-- Score Marchabilité -->
+          ${est.commodites && est.nb_commodites_1km ? `
+          <div style="background: ${est.score_walkability === 'excellent' ? 'rgba(22,163,106,.08)' : est.score_walkability === 'bon' ? 'rgba(37,99,235,.06)' : est.score_walkability === 'moyen' ? 'rgba(217,119,6,.06)' : 'rgba(220,38,38,.06)'}; border: 1px solid ${est.score_walkability === 'excellent' ? '#16a34a' : est.score_walkability === 'bon' ? '#2563eb' : est.score_walkability === 'moyen' ? '#d97706' : '#dc2626'}; border-radius: var(--r); padding: 0.75rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.5rem;">${est.score_walkability === 'excellent' ? '🌟' : est.score_walkability === 'bon' ? '✅' : est.score_walkability === 'moyen' ? '🟡' : '🔴'}</span>
+            <div>
+              <div style="font-weight: 700; font-size: 0.85rem; color: ${est.score_walkability === 'excellent' ? '#16a34a' : est.score_walkability === 'bon' ? '#2563eb' : est.score_walkability === 'moyen' ? '#d97706' : '#dc2626'};">Marchabilité : ${est.score_walkability.charAt(0).toUpperCase() + est.score_walkability.slice(1)}</div>
+              <div style="font-size: 0.75rem; color: var(--muted);">${est.nb_commodites_1km} équipements à moins de 1 km du centre</div>
+            </div>
+          </div>` : ''}
+
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;" title="Minimum observé sur les transactions réelles de la commune">
               <span style="font-size: 1.5rem;">🚂</span>
               <div>
-                <div style="font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 0.2rem;">
-                  Gare la plus proche
-                  <span style="font-size: 0.65rem; color: var(--muted); cursor: help;">ⓘ</span>
-                </div>
+                <div style="font-size: 0.72rem; color: var(--muted);">Gare la plus proche</div>
                 <strong style="font-size: 0.82rem;">${est.proximite.min_dist_gare_m != null ? fmtN(est.proximite.min_dist_gare_m) + ' m' : '—'}</strong>
-                <span style="display: block; font-size: 0.68rem; margin-top: 0.15rem; font-weight: 700; color: ${est.proximite.min_dist_gare_m < 500 ? '#16a34a' : est.proximite.min_dist_gare_m < 1500 ? '#d97706' : '#dc2626'}">
-                  ${est.proximite.min_dist_gare_m < 500 ? 'À pied (< 500m)' : est.proximite.min_dist_gare_m < 1500 ? 'À vélo (< 1.5km)' : 'Voiture (1.5km+)'}
-                </span>
               </div>
             </div>
-            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;" title="Minimum observé sur les transactions réelles de la commune">
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 1.5rem;">🎓</span>
               <div>
-                <div style="font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 0.2rem;">
-                  École la plus proche
-                  <span style="font-size: 0.65rem; color: var(--muted); cursor: help;">ⓘ</span>
-                </div>
+                <div style="font-size: 0.72rem; color: var(--muted);">École la plus proche</div>
                 <strong style="font-size: 0.82rem;">${est.proximite.min_dist_ecole_m != null ? fmtN(est.proximite.min_dist_ecole_m) + ' m' : '—'}</strong>
-                <span style="display: block; font-size: 0.68rem; margin-top: 0.15rem; font-weight: 700; color: ${est.proximite.min_dist_ecole_m < 500 ? '#16a34a' : est.proximite.min_dist_ecole_m < 1500 ? '#d97706' : '#dc2626'}">
-                  ${est.proximite.min_dist_ecole_m < 500 ? 'À pied (< 500m)' : est.proximite.min_dist_ecole_m < 1500 ? 'À vélo (< 1.5km)' : 'Voiture (1.5km+)'}
-                </span>
               </div>
             </div>
+            ${est.commodites?.pharmacie ? `
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">💊</span>
+              <div>
+                <div style="font-size: 0.72rem; color: var(--muted);">Pharmacie</div>
+                <strong style="font-size: 0.82rem;">${fmtN(est.commodites.pharmacie.dist_min_m)} m</strong>
+                <span style="display: block; font-size: 0.68rem; color: var(--muted);">${est.commodites.pharmacie.nb_1km} à ≤1km</span>
+              </div>
+            </div>` : ''}
+            ${est.commodites?.commerce ? `
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">🛒</span>
+              <div>
+                <div style="font-size: 0.72rem; color: var(--muted);">Commerce</div>
+                <strong style="font-size: 0.82rem;">${fmtN(est.commodites.commerce.dist_min_m)} m</strong>
+                <span style="display: block; font-size: 0.68rem; color: var(--muted);">${est.commodites.commerce.nb_1km} à ≤1km</span>
+              </div>
+            </div>` : ''}
+            ${est.commodites?.restaurant ? `
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">🍽️</span>
+              <div>
+                <div style="font-size: 0.72rem; color: var(--muted);">Restaurant</div>
+                <strong style="font-size: 0.82rem;">${fmtN(est.commodites.restaurant.dist_min_m)} m</strong>
+                <span style="display: block; font-size: 0.68rem; color: var(--muted);">${est.commodites.restaurant.nb_1km} à ≤1km</span>
+              </div>
+            </div>` : ''}
+            ${est.commodites?.transport ? `
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 0.6rem; border-radius: var(--r); display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">🚌</span>
+              <div>
+                <div style="font-size: 0.72rem; color: var(--muted);">Arrêt de bus</div>
+                <strong style="font-size: 0.82rem;">${fmtN(est.commodites.transport.dist_min_m)} m</strong>
+                <span style="display: block; font-size: 0.68rem; color: var(--muted);">${est.commodites.transport.nb_1km} à ≤1km</span>
+              </div>
+            </div>` : ''}
           </div>
           <div style="font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; text-align: center; font-style: italic;">
-            * Distances minimales réelles mesurées à partir des biens vendus dans la commune.
+            * Distances calculées depuis le centroïde géométrique de la commune via PostGIS.
           </div>
         </div>
 
@@ -550,15 +585,15 @@
             </div>
           </div>
 
-          <!-- Transport -->
+          <!-- Transport & Commodités -->
           <div class="dim-card" style="--dim-color:#7c3aed">
             <div class="dim-icon">🚂</div>
-            <div class="dim-label">Transport & Écoles</div>
-            <div class="dim-value">Min : ${est.proximite.min_dist_gare_m != null ? fmtN(est.proximite.min_dist_gare_m) + ' m (Gare)' : 'Non dispo'}</div>
-            <div class="dim-detail">Moy. Gare : ${est.proximite.avg_dist_gare_m != null ? fmtN(est.proximite.avg_dist_gare_m) + ' m' : '—'} · École : ${est.proximite.min_dist_ecole_m != null ? fmtN(est.proximite.min_dist_ecole_m) + ' m' : '—'}</div>
-            <div class="dim-score ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "good" : est.proximite.min_dist_gare_m < 1500 ? "ok" : "bad") : "na"}"
-                 title="${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? 'A : Très proche d\'une gare (< 500m)' : est.proximite.min_dist_gare_m < 1500 ? 'B : Proximité correcte d\'une gare (500m - 1.5km)' : 'C : Éloigné d\'une gare (>= 1.5km)') : 'Données de proximité non disponibles'}">
-              ${est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? "A" : est.proximite.min_dist_gare_m < 1500 ? "B" : "C") : "?"}
+            <div class="dim-label">Transport & Commodités</div>
+            <div class="dim-value">${est.score_walkability ? 'Marchabilité : ' + est.score_walkability.charAt(0).toUpperCase() + est.score_walkability.slice(1) + ' (' + est.nb_commodites_1km + ' éqts à 1km)' : (est.proximite.min_dist_gare_m != null ? 'Min : ' + fmtN(est.proximite.min_dist_gare_m) + ' m (Gare)' : 'Non dispo')}</div>
+            <div class="dim-detail">Gare : ${est.proximite.min_dist_gare_m != null ? fmtN(est.proximite.min_dist_gare_m) + ' m' : '—'} · École : ${est.proximite.min_dist_ecole_m != null ? fmtN(est.proximite.min_dist_ecole_m) + ' m' : '—'}${est.commodites?.pharmacie ? ' · 💊 ' + est.commodites.pharmacie.dist_min_m + 'm' : ''}${est.commodites?.commerce ? ' · 🛒 ' + est.commodites.commerce.dist_min_m + 'm' : ''}</div>
+            <div class="dim-score ${est.score_walkability ? (est.score_walkability === 'excellent' ? 'good' : est.score_walkability === 'bon' ? 'good' : est.score_walkability === 'moyen' ? 'ok' : 'bad') : (est.proximite.min_dist_gare_m != null ? (est.proximite.min_dist_gare_m < 500 ? 'good' : est.proximite.min_dist_gare_m < 1500 ? 'ok' : 'bad') : 'na')}"
+                 title="${est.score_walkability ? 'Score de marchabilité : ' + est.score_walkability + ' — ' + est.nb_commodites_1km + ' équipements dans un rayon de 1km' : 'Score non disponible'}">
+              ${est.score_walkability ? (est.score_walkability === 'excellent' ? 'A' : est.score_walkability === 'bon' ? 'B' : est.score_walkability === 'moyen' ? 'C' : 'D') : '?'}
             </div>
           </div>
 
@@ -661,7 +696,7 @@
       }
     }
   </script>
-  <script src="/static/js/chat_widget.js" defer></script>
+  <script src="/static/js/chat_widget.js?v=4" defer></script>
 </body>
 
 </html>

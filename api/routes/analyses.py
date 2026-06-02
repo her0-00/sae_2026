@@ -163,19 +163,55 @@ def liste_pois():
     if not commune_code:
         abort(422)
 
-    rows = query(
+    # Types principaux d'équipements (priorité haute, affichés intégralement)
+    major_types = ('gare', 'ecole', 'universite', 'cinema', 'salle_sport',
+                   'restaurant', 'pharmacie', 'commerce')
+    # Types secondaires (affichés en nombre limité pour ne pas noyer la liste)
+    minor_types = ('transport', 'parking')
+
+    # Récupérer tous les POI majeurs (sans limite)
+    major_rows = query(
         """
         SELECT p.type, p.nom, p.latitude, p.longitude,
                ROUND(ST_Distance(p.geom::geography, ST_Centroid(c.geom)::geography))::integer as dist_centroid_m
         FROM points_interet p
         JOIN communes_stats c ON ST_Within(p.geom, c.geom)
         WHERE c.commune_code = %s
-        ORDER BY p.type, dist_centroid_m
-        LIMIT 100
+          AND p.type = ANY(%s)
+        ORDER BY
+            CASE p.type
+                WHEN 'gare' THEN 1
+                WHEN 'universite' THEN 2
+                WHEN 'cinema' THEN 3
+                WHEN 'salle_sport' THEN 4
+                WHEN 'ecole' THEN 5
+                WHEN 'pharmacie' THEN 6
+                WHEN 'commerce' THEN 7
+                WHEN 'restaurant' THEN 8
+            END,
+            dist_centroid_m
+        LIMIT 150
         """,
-        (commune_code,),
+        (commune_code, list(major_types)),
     )
-    return jsonify([dict(r) for r in rows])
+
+    # Récupérer les POI secondaires (top 10 les plus proches du centre, pour info)
+    minor_rows = query(
+        """
+        SELECT p.type, p.nom, p.latitude, p.longitude,
+               ROUND(ST_Distance(p.geom::geography, ST_Centroid(c.geom)::geography))::integer as dist_centroid_m
+        FROM points_interet p
+        JOIN communes_stats c ON ST_Within(p.geom, c.geom)
+        WHERE c.commune_code = %s
+          AND p.type = ANY(%s)
+        ORDER BY dist_centroid_m
+        LIMIT 20
+        """,
+        (commune_code, list(minor_types)),
+    )
+
+    all_rows = list(major_rows or []) + list(minor_rows or [])
+    return jsonify([dict(r) for r in all_rows])
 
 
 @bp.get("/ges")

@@ -234,6 +234,40 @@ def estimer():
 
     dpe_dist = {r["dpe_classe"]: int(r["count"]) for r in dpe_rows} if dpe_rows else {}
 
+    # 5. Commodités de proximité (points_interet via PostGIS)
+    commodites_raw = query(
+        """
+        SELECT
+            p.type,
+            ROUND(MIN(ST_Distance(p.geom::geography, ST_Centroid(c.geom)::geography)))::integer AS dist_min_m,
+            COUNT(*) FILTER (WHERE ST_DWithin(p.geom::geography, ST_Centroid(c.geom)::geography, 1000)) AS nb_1km
+        FROM points_interet p
+        JOIN communes_stats c ON ST_Within(p.geom, c.geom)
+        WHERE c.commune_code = %s
+        GROUP BY p.type
+        """,
+        (commune_code,),
+    )
+
+    commodites = {}
+    if commodites_raw:
+        for r in commodites_raw:
+            commodites[r["type"]] = {
+                "dist_min_m": int(r["dist_min_m"]) if r["dist_min_m"] is not None else None,
+                "nb_1km": int(r["nb_1km"]) if r["nb_1km"] is not None else 0,
+            }
+
+    # Score de marchabilité (nb d'équipements à 1 km)
+    nb_commodites_1km = sum(v["nb_1km"] for v in commodites.values())
+    if nb_commodites_1km >= 30:
+        score_walkability = "excellent"
+    elif nb_commodites_1km >= 15:
+        score_walkability = "bon"
+    elif nb_commodites_1km >= 5:
+        score_walkability = "moyen"
+    else:
+        score_walkability = "faible"
+
     return jsonify({
         "commune_code":      commune_code,
         "type_local":        type_local,
@@ -270,6 +304,10 @@ def estimer():
             "revenu_median":    float(socio.get("revenu_median") or 0.0) if socio.get("revenu_median") else None,
             "taux_chomage":     float(socio.get("taux_chomage") or 0.0) if socio.get("taux_chomage") else None,
         },
-        "dpe_dist": dpe_dist
+        "dpe_dist": dpe_dist,
+        # Nouvelles commodités de proximité
+        "commodites": commodites,
+        "score_walkability": score_walkability,
+        "nb_commodites_1km": nb_commodites_1km,
     })
 

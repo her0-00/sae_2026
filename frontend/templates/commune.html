@@ -292,9 +292,9 @@
         <div id="poi-map" style="height: 380px; width: 100%;"></div>
       </div>
       <div class="card">
-        <div class="card-title">Équipements répertoriés dans la commune (Gares & Écoles)</div>
+        <div class="card-title">Équipements de proximité répertoriés dans la commune</div>
         ${poisD.length ? `
-        <div style="max-height: 300px; overflow-y: auto; padding-right: 0.5rem;">
+        <div style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
           <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
             <thead>
               <tr style="border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 700;">
@@ -304,22 +304,31 @@
               </tr>
             </thead>
             <tbody>
-              ${poisD.map(p => `
+              ${poisD.map(p => {
+                const poiLabels = {
+                  gare: '🚂 Gare', ecole: '🎓 École', universite: '🏛️ Université',
+                  cinema: '🎬 Cinéma', salle_sport: '💪 Salle de sport',
+                  restaurant: '🍽️ Restaurant', pharmacie: '💊 Pharmacie',
+                  commerce: '🛒 Commerce', transport: '🚌 Arrêt de bus',
+                  parking: '🚗 Parking'
+                };
+                return `
               <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s;">
                 <td style="padding: 0.6rem; font-weight: 600;">
-                  ${p.type === 'gare' ? '🚂 Gare' : '🎓 Établissement scolaire'}
+                  ${poiLabels[p.type] || p.type}
                 </td>
                 <td style="padding: 0.6rem; color: var(--text);">${p.nom || 'Sans nom'}</td>
                 <td style="padding: 0.6rem; text-align: right; color: var(--muted); font-weight: 600;">
                   ${fmtN(p.dist_centroid_m)} m
                 </td>
-              </tr>`).join("")}
+              </tr>`;
+              }).join("")}
             </tbody>
           </table>
         </div>
         <div style="font-size: 0.68rem; color: var(--muted); margin-top: 0.5rem; text-align: center; font-style: italic;">
           * Les distances sont mesurées géospatialement par rapport au centroïde géométrique (centre de gravité) du contour de la commune.
-        </div>` : `<div class="alert alert-info">Aucun équipement (gare ou école) n'a été détecté à l'intérieur des contours de cette commune.</div>`}
+        </div>` : `<div class="alert alert-info">Aucun équipement n'a été détecté à l'intérieur des contours de cette commune.</div>`}
       </div>
     </div>
   </div>
@@ -458,6 +467,19 @@
           }
           // LEAFLET POI MINI-MAP
           if (poisD && poisD.length > 0 && resume) {
+            const POI_STYLE = {
+              gare:        { emoji: '🚂', color: '#7c3aed', label: 'Gare' },
+              ecole:       { emoji: '🎓', color: '#2563eb', label: 'École' },
+              universite:  { emoji: '🏛️', color: '#0d9488', label: 'Université' },
+              cinema:      { emoji: '🎬', color: '#db2777', label: 'Cinéma' },
+              salle_sport: { emoji: '💪', color: '#ea580c', label: 'Salle de sport' },
+              restaurant:  { emoji: '🍽️', color: '#ca8a04', label: 'Restaurant' },
+              pharmacie:   { emoji: '💊', color: '#16a34a', label: 'Pharmacie' },
+              commerce:    { emoji: '🛒', color: '#0284c7', label: 'Commerce' },
+              transport:   { emoji: '🚌', color: '#6366f1', label: 'Arrêt de bus' },
+              parking:     { emoji: '🚗', color: '#64748b', label: 'Parking' },
+            };
+
             let lats = poisD.map(p => parseFloat(p.latitude)).filter(Boolean);
             let lngs = poisD.map(p => parseFloat(p.longitude)).filter(Boolean);
             let centerLat = lats.reduce((s, x) => s + x, 0) / lats.length;
@@ -476,13 +498,11 @@
               
               const bounds = [];
               poisD.forEach(p => {
-                const isGare = p.type === 'gare';
-                const iconText = isGare ? '🚂' : '🎓';
-                const markerColor = isGare ? '#7c3aed' : '#2563eb';
+                const style = POI_STYLE[p.type] || { emoji: '📍', color: '#6b7280', label: p.type };
                 
                 const htmlIcon = L.divIcon({
                   className: 'custom-div-icon',
-                  html: `<div style="background:${markerColor}; color:white; font-size:0.85rem; padding: 4px; border-radius:50%; width: 24px; height: 24px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">${iconText}</div>`,
+                  html: `<div style="background:${style.color}; color:white; font-size:0.85rem; padding: 4px; border-radius:50%; width: 24px; height: 24px; display:flex; align-items:center; justify-content:center; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">${style.emoji}</div>`,
                   iconSize: [24, 24],
                   iconAnchor: [12, 12]
                 });
@@ -491,7 +511,7 @@
                 const pLng = parseFloat(p.longitude);
                 if (pLat && pLng) {
                   L.marker([pLat, pLng], { icon: htmlIcon })
-                   .bindPopup(`<strong>${isGare ? '🚂 Gare' : '🎓 École'}</strong><br>${p.nom || 'Sans nom'}`)
+                   .bindPopup(`<strong>${style.emoji} ${style.label}</strong><br>${p.nom || 'Sans nom'}`)
                    .addTo(mapInstance);
                   bounds.push([pLat, pLng]);
                 }
@@ -640,7 +660,7 @@
   </div>`;
     }
   </script>
-  <script src="/static/js/chat_widget.js" defer></script>
+  <script src="/static/js/chat_widget.js?v=4" defer></script>
 </body>
 
 </html>

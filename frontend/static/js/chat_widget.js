@@ -1370,6 +1370,19 @@
     }
 
     function renderVisualMap(config) {
+        const POI_STYLE = {
+            gare:        { emoji: '🚂', color: '#7c3aed' },
+            ecole:       { emoji: '🎓', color: '#2563eb' },
+            universite:  { emoji: '🏛️', color: '#0d9488' },
+            cinema:      { emoji: '🎬', color: '#db2777' },
+            salle_sport: { emoji: '💪', color: '#ea580c' },
+            restaurant:  { emoji: '🍽️', color: '#ca8a04' },
+            pharmacie:   { emoji: '💊', color: '#16a34a' },
+            commerce:    { emoji: '🛒', color: '#0284c7' },
+            transport:   { emoji: '🚌', color: '#6366f1' },
+            parking:     { emoji: '🚗', color: '#64748b' },
+        };
+
         config = config || {};
         if (currentVisualMap) {
             currentVisualMap.remove();
@@ -1509,12 +1522,29 @@
 
             filteredMarkers.forEach(m => {
                 if (m.lat && m.lng) {
-                    const marker = L.marker([m.lat, m.lng])
-                        .bindPopup(`
-                            <div class="text-slate-900 font-sans text-xs p-1">
-                                ${m.popup}
-                            </div>
-                        `);
+                    let marker;
+                    const poi = POI_STYLE[m.type];
+                    if (poi) {
+                        const icon = L.divIcon({
+                            className: '',
+                            html: `<div style="background:${poi.color};color:white;font-size:0.95rem;padding:4px;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);">${poi.emoji}</div>`,
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 14]
+                        });
+                        marker = L.marker([m.lat, m.lng], { icon });
+                    } else if (m.valeur_fonciere) {
+                        const prix_k = Math.round(m.valeur_fonciere / 1000) + ' k€';
+                        const icon = L.divIcon({
+                            className: '',
+                            html: `<div style="background:#dc2626;color:white;font-weight:700;font-size:0.8rem;padding:2px 6px;border-radius:12px;border:1.5px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);white-space:nowrap;">${prix_k}</div>`,
+                            iconSize: [50, 24],
+                            iconAnchor: [25, 12]
+                        });
+                        marker = L.marker([m.lat, m.lng], { icon });
+                    } else {
+                        marker = L.marker([m.lat, m.lng]);
+                    }
+                    marker.bindPopup(`<div style="font-size:0.85rem;line-height:1.4;">${m.popup}</div>`);
                     markersGroup.addLayer(marker);
                 }
             });
@@ -1530,19 +1560,31 @@
         }
 
         if (config.poi_markers && config.poi_markers.length > 0) {
-            const redIcon = new L.Icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            });
             config.poi_markers.forEach(poi => {
                 if (poi.lat && poi.lng) {
-                    L.marker([poi.lat, poi.lng], {icon: redIcon})
-                        .bindPopup(`<div class="text-red-700 font-bold font-sans text-sm p-1">🎯 ${poi.popup}</div>`)
-                        .addTo(currentVisualMap);
+                    let marker;
+                    const style = POI_STYLE[poi.type];
+                    if (style) {
+                        const icon = L.divIcon({
+                            className: '',
+                            html: `<div style="background:${style.color};color:white;font-size:1.1rem;padding:6px;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2.5px solid #dc2626;box-shadow:0 0 12px ${style.color};">${style.emoji}</div>`,
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 18]
+                        });
+                        marker = L.marker([poi.lat, poi.lng], { icon });
+                    } else {
+                        const redIcon = new L.Icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        });
+                        marker = L.marker([poi.lat, poi.lng], { icon: redIcon });
+                    }
+                    marker.bindPopup(`<div class="text-red-700 font-bold font-sans text-sm p-1">🎯 ${poi.popup}</div>`)
+                          .addTo(currentVisualMap);
                 }
             });
         }
