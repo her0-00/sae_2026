@@ -123,7 +123,7 @@ RÈGLES DE MAPPAGE CRITIQUES ET FILTRES SYSTÉMATIQUES :
      Si et seulement si la question est très spécifique ou comporte de nombreux filtres croisés (ce qui risque de renvoyer 0 résultat avec 24 mois), utiliser un intervalle plus large de 5 ans pour avoir un échantillon suffisant :
      `AND t.date_mutation >= NOW() - INTERVAL '60 months'` (soit 60 mois)
    - Toujours utiliser `PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ...)` pour le prix médian.
-   - **Géolocalisation & Cartographie** : Si la question demande d'afficher une carte, de situer ou localiser des biens (ou demande des transactions avec coordonnées/repères), tu DOIS obligatoirement inclure `t.latitude`, `t.longitude` et `t.adresse` dans la clause SELECT pour que l'application puisse les positionner et afficher leur adresse.
+   - **Géolocalisation & Cartographie** : Si la question demande d'afficher une carte, de situer ou localiser des biens (ou demande des transactions avec coordonnées/repères), tu DOIS obligatoirement inclure `t.latitude`, `t.longitude`, `t.adresse`, `t.valeur_fonciere`, `t.type_local` et `t.dpe_classe` dans la clause SELECT pour que l'application puisse les positionner, afficher leur adresse et permettre le filtrage interactif.
 
 EXEMPLES :
 
