@@ -342,7 +342,7 @@ def _text_to_sql_with_retry(question: str, client: AzureOpenAI,
     return last_sql, [], last_error
 
 
-def _format_results_as_context(results: list[dict], sql: str, error: str) -> str:
+def _format_results_as_context(results: list[dict], sql: str, error: str, question: str = "") -> str:
     """Formate les résultats SQL en bloc de contexte lisible pour le LLM."""
     if error and not results:
         return (
@@ -353,10 +353,12 @@ def _format_results_as_context(results: list[dict], sql: str, error: str) -> str
         )
 
     if not results:
-        return "Aucun résultat trouvé dans la base de données pour cette requête.\n"
+        return f"Aucun résultat trouvé dans la base de données pour la question : '{question}'.\n"
 
     cols = list(results[0].keys())
     ctx  = "=== RÉSULTATS REQUÊTE BASE IMMOBI ===\n"
+    if question:
+        ctx += f"Question traitée : {question}\n"
     ctx += f"SQL : {sql[:300]}{'...' if len(sql) > 300 else ''}\n"
     ctx += f"Lignes retournées : {len(results)}\n\n"
 
@@ -596,7 +598,7 @@ def chat_copilot():
 
     # ── Phase 1 : Text-to-SQL avec retry ──────────────────────────────────────
     sql_used, db_results, sql_error = _text_to_sql_with_retry(latest, client, deployment)
-    db_context    = _format_results_as_context(db_results, sql_used, sql_error)
+    db_context    = _format_results_as_context(db_results, sql_used, sql_error, latest)
     system_prompt = _build_system_prompt(db_context)
     api_messages  = [{"role": "system", "content": system_prompt}] + messages
 
