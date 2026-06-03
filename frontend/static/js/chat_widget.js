@@ -1,4 +1,4 @@
-(function() {
+(function () {
     // ── Styles CSS injectés dynamiquement ─────────────────────────
     const style = document.createElement("style");
     style.innerHTML = `
@@ -639,15 +639,15 @@
     // ── Simple Parser Markdown pour le Copilot ───────────────────
     function parseMarkdown(text) {
         if (!text) return "";
-        
+
         let html = text;
-        
+
         // 1. Échapper le HTML brut pour des raisons de sécurité (XSS)
         html = html
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
-            
+
         // 2. Extraire et protéger les blocs de code multi-lignes
         const codeBlocks = [];
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
@@ -655,7 +655,7 @@
             codeBlocks.push(`<pre><code class="language-${lang}">${code.trim()}</code></pre>`);
             return `__CODE_BLOCK_${index}__`;
         });
-        
+
         // 3. Extraire et protéger les blocs de code en ligne
         const inlineCode = [];
         html = html.replace(/`([^`]+)`/g, (match, code) => {
@@ -663,35 +663,35 @@
             inlineCode.push(`<code>${code}</code>`);
             return `__INLINE_CODE_${index}__`;
         });
-        
+
         // 4. Titres (H1, H2, H3)
         html = html
             .replace(/^### (.*$)/gim, "<h3>$1</h3>")
             .replace(/^## (.*$)/gim, "<h2>$1</h2>")
             .replace(/^# (.*$)/gim, "<h1>$1</h1>");
-            
+
         // 5. Gras & Italique
         html = html
             .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
             .replace(/\*([^*]+)\*/g, "<em>$1</em>")
             .replace(/__([^_]+)__/g, "<strong>$1</strong>")
             .replace(/_([^_]+)_/g, "<em>$1</em>");
-            
+
         // 6. Liens hypertextes [texte](url)
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-        
+
         // 6.5 Tables Markdown
         html = parseMarkdownTables(html);
-        
+
         // 7. Listes ordonnées et non-ordonnées
         const lines = html.split('\n');
         let inList = false;
         let inNumList = false;
         let processedLines = [];
-        
+
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i];
-            
+
             // Liste à puces (- ou *)
             if (line.match(/^\s*[-*+]\s+(.*)/)) {
                 if (inNumList) {
@@ -703,7 +703,7 @@
                     inList = true;
                 }
                 line = line.replace(/^\s*[-*+]\s+(.*)/, '<li>$1</li>');
-            } 
+            }
             // Liste numérotée (1., 2.)
             else if (line.match(/^\s*\d+\.\s+(.*)/)) {
                 if (inList) {
@@ -715,7 +715,7 @@
                     inNumList = true;
                 }
                 line = line.replace(/^\s*\d+\.\s+(.*)/, '<li>$1</li>');
-            } 
+            }
             // Ligne classique
             else {
                 if (inList) {
@@ -727,15 +727,15 @@
                     inNumList = false;
                 }
             }
-            
+
             processedLines.push(line);
         }
-        
+
         if (inList) processedLines.push('</ul>');
         if (inNumList) processedLines.push('</ol>');
-        
+
         html = processedLines.join('\n');
-        
+
         // 8. Paragraphes & sauts de ligne simples
         const paragraphs = html.split(/\n{2,}/);
         html = paragraphs.map(p => {
@@ -747,16 +747,16 @@
             }
             return `<p>${p.replace(/\n/g, "<br>")}</p>`;
         }).filter(Boolean).join("");
-        
+
         // 9. Restaurer le code en ligne et les blocs de code
         inlineCode.forEach((code, idx) => {
             html = html.replace(`__INLINE_CODE_${idx}__`, code);
         });
-        
+
         codeBlocks.forEach((code, idx) => {
             html = html.replace(`__CODE_BLOCK_${idx}__`, code);
         });
-        
+
         return html;
     }
 
@@ -767,7 +767,7 @@
         let inTable = false;
         let tableRows = [];
         let outputLines = [];
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith('|') && line.endsWith('|')) {
@@ -792,18 +792,18 @@
 
     function renderStyledTable(rows) {
         if (rows.length < 2) return rows.join('\n');
-        
+
         // Parse headers
         const headers = rows[0]
             .split('|')
             .map(x => x.trim())
             .filter((x, idx, arr) => idx > 0 && idx < arr.length - 1);
-            
+
         let dataStartIndex = 1;
         if (rows[1] && rows[1].replace(/[\s|:-]/g, '') === '') {
             dataStartIndex = 2;
         }
-        
+
         // Parse data rows
         const data = [];
         for (let i = dataStartIndex; i < rows.length; i++) {
@@ -815,13 +815,13 @@
                 data.push(cells);
             }
         }
-        
+
         if (data.length === 0) return rows.join('\n');
-        
+
         // Analyse des colonnes pour trouver des métriques numériques à comparer
         const maxValues = {};
         const colIsNumeric = {};
-        
+
         headers.forEach((header, colIdx) => {
             const lowerHeader = header.toLowerCase();
             if (
@@ -840,24 +840,24 @@
                     const match = cleanCell.match(/\d+/);
                     return match ? parseInt(match[0], 10) : null;
                 }).filter(x => x !== null);
-                
+
                 if (numbers.length > 0) {
                     colIsNumeric[colIdx] = true;
                     maxValues[colIdx] = Math.max(...numbers);
                 }
             }
         });
-        
+
         // Génération du tableau HTML stylisé
         let html = '<div class="immobi-table-container"><table class="immobi-table">';
-        
+
         // En-tête
         html += '<thead><tr>';
         headers.forEach(h => {
             html += `<th>${h}</th>`;
         });
         html += '</tr></thead><tbody>';
-        
+
         // Données
         data.forEach(row => {
             html += '<tr>';
@@ -884,7 +884,7 @@
             });
             html += '</tr>';
         });
-        
+
         html += '</tbody></table></div>';
         return html;
     }
@@ -1017,7 +1017,7 @@
             expandBtn.innerHTML = "⛶";
             expandBtn.title = "Plein écran";
         }
-        
+
         if (currentVisualMap) {
             setTimeout(() => {
                 currentVisualMap.invalidateSize();
@@ -1055,7 +1055,7 @@
         messagesHistory.forEach(msg => {
             appendMessage(msg.content, msg.role === "assistant" ? "assistant" : "user", msg.widget);
         });
-        
+
         // Rendre automatiquement le dernier widget disponible de l'historique au chargement
         const lastMsgWithWidget = [...messagesHistory].reverse().find(m => m.role === "assistant" && m.widget && m.widget.type !== "none");
         if (lastMsgWithWidget) {
@@ -1141,15 +1141,15 @@
         currentCommune = communeName;
 
         chatSuggestionsEl.innerHTML = "";
-        
+
         const pills = [
             { text: `📍 Analyser ${communeName}`, prompt: `Analyser le marché à ${communeName}` }
         ];
 
         if (previousCommune && previousCommune !== currentCommune) {
-            pills.push({ 
-                text: `⚖️ Comparer avec ${previousCommune}`, 
-                prompt: `Je veux acheter un bien à ${communeName} ou à ${previousCommune}, fais-moi une comparaison complète.` 
+            pills.push({
+                text: `⚖️ Comparer avec ${previousCommune}`,
+                prompt: `Je veux acheter un bien à ${communeName} ou à ${previousCommune}, fais-moi une comparaison complète.`
             });
         }
 
@@ -1165,7 +1165,7 @@
         });
 
         chatSuggestionsEl.style.display = "flex";
-        
+
         // Ajuster le défilement si nécessaire
         setTimeout(() => {
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
@@ -1174,7 +1174,7 @@
 
     // Intercepter setItem pour détecter les clics sur la carte en temps réel
     const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key, value) {
+    localStorage.setItem = function (key, value) {
         originalSetItem.apply(this, arguments);
         if (key === "selected_commune_name") {
             window.dispatchEvent(new CustomEvent("immobiCommuneChanged", { detail: value }));
@@ -1257,9 +1257,14 @@
         const chartWrapper = document.getElementById("immobi-visualizer-chart-wrapper");
         const mapWrapper = document.getElementById("immobi-visualizer-map-wrapper");
 
-        titleEl.innerText = widget.title || "Visualisation";
+        let titleText = widget.title || "Visualisation";
+        if (widget.type === 'map' && widget.map_config && widget.map_config.poi_markers && widget.map_config.poi_markers.length > 0) {
+            const names = widget.map_config.poi_markers.map(p => p.popup).join(" & ");
+            titleText += ` (${names})`;
+        }
+        titleEl.innerText = titleText;
         chatWindow.classList.add("with-visualizer");
-        
+
         const filterPanel = document.getElementById("immobi-visualizer-filters");
 
         if (widget.type === 'chart') {
@@ -1276,17 +1281,19 @@
             mapWrapper.style.display = "block";
             chartWrapper.style.display = "none";
             if (filterPanel) filterPanel.style.display = "flex";
-            try {
-                await ensureLeafletLoaded();
-                renderVisualMap(widget.map_config);
-                setTimeout(() => {
+            
+            // Attendre 150ms pour que la div soit dimensionnée par le navigateur (Leaflet a besoin d'une taille non-nulle au chargement)
+            setTimeout(async () => {
+                try {
+                    await ensureLeafletLoaded();
+                    renderVisualMap(widget.map_config);
                     if (currentVisualMap) {
                         currentVisualMap.invalidateSize();
                     }
-                }, 350);
-            } catch (err) {
-                console.error("Erreur de chargement Leaflet:", err);
-            }
+                } catch (err) {
+                    console.error("Erreur de chargement Leaflet:", err);
+                }
+            }, 150);
         }
 
         // Commutateur d'onglets automatique sur mobile vers le visuel (ou en hauteur réduite de viewport)
@@ -1303,7 +1310,7 @@
         }
 
         const ctx = document.getElementById('immobi-visualizer-chart').getContext('2d');
-        
+
         const dpeColors = {
             'A': '#15803d', 'B': '#16a34a', 'C': '#84cc16', 'D': '#facc15', 'E': '#f97316', 'F': '#dc2626', 'G': '#7f1d1d'
         };
@@ -1312,11 +1319,11 @@
             const colorPalette = [
                 '#0ea5e9', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444', '#10b981'
             ];
-            
+
             let bgColors = [];
             let borderColors = [];
-            
-            if (config.labels && config.labels.every(l => ['A','B','C','D','E','F','G'].includes(String(l).toUpperCase()))) {
+
+            if (config.labels && config.labels.every(l => ['A', 'B', 'C', 'D', 'E', 'F', 'G'].includes(String(l).toUpperCase()))) {
                 bgColors = config.labels.map(l => dpeColors[String(l).toUpperCase()] + '66');
                 borderColors = config.labels.map(l => dpeColors[String(l).toUpperCase()]);
             } else {
@@ -1371,16 +1378,16 @@
 
     function renderVisualMap(config) {
         const POI_STYLE = {
-            gare:        { emoji: '🚂', color: '#7c3aed' },
-            ecole:       { emoji: '🎓', color: '#2563eb' },
-            universite:  { emoji: '🏛️', color: '#0d9488' },
-            cinema:      { emoji: '🎬', color: '#db2777' },
+            gare: { emoji: '🚂', color: '#7c3aed' },
+            ecole: { emoji: '🎓', color: '#2563eb' },
+            universite: { emoji: '🏛️', color: '#0d9488' },
+            cinema: { emoji: '🎬', color: '#db2777' },
             salle_sport: { emoji: '💪', color: '#ea580c' },
-            restaurant:  { emoji: '🍽️', color: '#ca8a04' },
-            pharmacie:   { emoji: '💊', color: '#16a34a' },
-            commerce:    { emoji: '🛒', color: '#0284c7' },
-            transport:   { emoji: '🚌', color: '#6366f1' },
-            parking:     { emoji: '🚗', color: '#64748b' },
+            restaurant: { emoji: '🍽️', color: '#ca8a04' },
+            pharmacie: { emoji: '💊', color: '#16a34a' },
+            commerce: { emoji: '🛒', color: '#0284c7' },
+            transport: { emoji: '🚌', color: '#6366f1' },
+            parking: { emoji: '🚗', color: '#64748b' },
         };
 
         config = config || {};
@@ -1404,26 +1411,26 @@
         }).addTo(currentVisualMap);
 
         const markersData = config.markers || [];
-        
+
         // 1. Initialize Budget Filter
         const prices = markersData.map(m => m.valeur_fonciere).filter(p => p !== null && p !== undefined);
         const budgetGroup = document.getElementById("filter-group-budget");
         const budgetSlider = document.getElementById("filter-input-budget");
         const budgetVal = document.getElementById("filter-val-budget");
-        
+
         let hasBudget = prices.length > 0;
         if (hasBudget) {
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
-            
+
             budgetSlider.min = minPrice;
             budgetSlider.max = maxPrice;
             budgetSlider.value = maxPrice;
-            
+
             budgetVal.innerText = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(maxPrice);
             budgetGroup.style.display = "flex";
-            
-            budgetSlider.oninput = function() {
+
+            budgetSlider.oninput = function () {
                 budgetVal.innerText = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(this.value);
                 applyFilters();
             };
@@ -1435,7 +1442,7 @@
         const types = [...new Set(markersData.map(m => m.type_local).filter(Boolean))];
         const typeGroup = document.getElementById("filter-group-type");
         const typeContainer = document.getElementById("filter-container-type");
-        
+
         typeContainer.innerHTML = "";
         let hasTypes = types.length > 1;
         if (hasTypes) {
@@ -1444,7 +1451,7 @@
                 btn.className = "immobi-filter-btn active";
                 btn.innerText = t;
                 btn.dataset.type = t;
-                btn.onclick = function() {
+                btn.onclick = function () {
                     btn.classList.toggle("active");
                     applyFilters();
                 };
@@ -1459,13 +1466,13 @@
         const dpesInData = [...new Set(markersData.map(m => m.dpe_classe).filter(Boolean).map(d => d.toUpperCase()))];
         const dpeGroup = document.getElementById("filter-group-dpe");
         const dpeContainer = document.getElementById("filter-container-dpe");
-        
+
         dpeContainer.innerHTML = "";
         const allDpes = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
         const dpeColors = {
             'A': '#15803d', 'B': '#16a34a', 'C': '#84cc16', 'D': '#facc15', 'E': '#f97316', 'F': '#dc2626', 'G': '#7f1d1d'
         };
-        
+
         let hasDpes = dpesInData.length > 0;
         if (hasDpes) {
             allDpes.forEach(d => {
@@ -1477,7 +1484,7 @@
                 badge.innerText = d;
                 badge.dataset.dpe = d;
                 badge.style.backgroundColor = dpeColors[d];
-                badge.onclick = function() {
+                badge.onclick = function () {
                     badge.classList.toggle("inactive");
                     applyFilters();
                 };
@@ -1496,13 +1503,13 @@
 
         function applyFilters() {
             markersGroup.clearLayers();
-            
+
             const maxBudget = hasBudget ? parseFloat(budgetSlider.value) : Infinity;
-            
-            const activeTypes = hasTypes 
+
+            const activeTypes = hasTypes
                 ? Array.from(typeContainer.querySelectorAll(".immobi-filter-btn.active")).map(b => b.dataset.type)
                 : types;
-                
+
             const activeDpes = hasDpes
                 ? Array.from(dpeContainer.querySelectorAll(".immobi-filter-dpe-badge:not(.inactive)")).map(b => b.dataset.dpe)
                 : allDpes;
@@ -1554,12 +1561,13 @@
                 if (bounds.isValid()) {
                     currentVisualMap.fitBounds(bounds, { padding: [25, 25] });
                 }
-            } catch(e) {
+            } catch (e) {
                 console.log("Error fitting map bounds:", e);
             }
         }
 
         if (config.poi_markers && config.poi_markers.length > 0) {
+            console.log("POI markers received:", config.poi_markers);
             config.poi_markers.forEach(poi => {
                 if (poi.lat && poi.lng) {
                     let marker;
@@ -1567,11 +1575,11 @@
                     if (style) {
                         const icon = L.divIcon({
                             className: '',
-                            html: `<div style="background:${style.color};color:white;font-size:1.1rem;padding:6px;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2.5px solid #dc2626;box-shadow:0 0 12px ${style.color};">${style.emoji}</div>`,
+                            html: `<div style="background:${style.color};color:white;font-size:1.1rem;padding:6px;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2.5px solid #dc2626;box-shadow:0 0 12px ${style.color};box-sizing:border-box;">${style.emoji}</div>`,
                             iconSize: [36, 36],
                             iconAnchor: [18, 18]
                         });
-                        marker = L.marker([poi.lat, poi.lng], { icon });
+                        marker = L.marker([poi.lat, poi.lng], { icon, zIndexOffset: 1000 });
                     } else {
                         const redIcon = new L.Icon({
                             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -1581,10 +1589,11 @@
                             popupAnchor: [1, -34],
                             shadowSize: [41, 41]
                         });
-                        marker = L.marker([poi.lat, poi.lng], { icon: redIcon });
+                        marker = L.marker([poi.lat, poi.lng], { icon: redIcon, zIndexOffset: 1000 });
                     }
+                    console.log("Rendering POI marker on map:", poi.popup, "at", poi.lat, poi.lng);
                     marker.bindPopup(`<div class="text-red-700 font-bold font-sans text-sm p-1">🎯 ${poi.popup}</div>`)
-                          .addTo(currentVisualMap);
+                        .addTo(currentVisualMap);
                 }
             });
         }
@@ -1672,7 +1681,7 @@
                             assistantEl.innerHTML = parseMarkdown(fullContent);
                             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
                         }
-                    } catch (_) {}
+                    } catch (_) { }
                 }
             }
 

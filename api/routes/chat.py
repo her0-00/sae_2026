@@ -97,8 +97,25 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
     )
   LIMIT 1000
   ```
+- Si la question porte sur plusieurs POIs de référence (ex: "un Fitness Park ou un Basic Fit"), utiliser EXISTS avec une sous-requête pour trouver les transactions à proximité de l'un ou l'autre de ces POIs :
+  ```sql
+  SELECT t.latitude, t.longitude, t.adresse, t.valeur_fonciere, t.type_local, t.dpe_classe, t.prix_m2, t.surface_bati
+  FROM transactions t
+  JOIN communes_stats c ON t.commune_code = c.commune_code
+  WHERE translate(lower(c.nom_commune), 'âàäéèêëîïôöûüùç', 'aaaeeeeiioouuuc') = 'vannes'
+    AND t.est_valide = TRUE
+    AND t.date_mutation >= NOW() - INTERVAL '24 months'
+    AND EXISTS (
+      SELECT 1 FROM points_interet p
+      WHERE p.type = 'salle_sport'
+        AND replace(replace(lower(COALESCE(p.nom,'')), '-', ''), ' ', '') IN ('fitnesspark', 'basicfit')
+        AND ST_DWithin(t.geom::geography, p.geom::geography, 2000)
+    )
+  LIMIT 1000
+  ```
 - IMPORTANT : pour les recherches spatiales autour d'un POI, utiliser un rayon de 2000m par défaut.
 - Pour rechercher un POI par nom, normaliser avec `replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '')` et comparer avec le nom sans tirets ni espaces (ex: 'basicfit', 'fitnespark'). Ne JAMAIS utiliser LIKE/ILIKE avec le caractère `%`.
+- IMPORTANT POUR LES GARES : Le nom d'une gare (type = 'gare') dans la base de données correspond uniquement au nom de la commune elle-même (ex: 'vannes' pour la gare de Vannes, 'nantes' pour la gare de Nantes, 'chantenay' pour la gare de Chantenay). Donc, pour chercher la gare de Vannes, filtrer par type = 'gare' et par le nom de la ville : `type = 'gare' AND replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = 'vannes'`. Ne JAMAIS chercher 'garedevannes' ou 'garedenantes' dans le nom du POI.
 - Pour tout POI référencé dans points_interet : TOUJOURS utiliser une sous-requête pour récupérer ses coordonnées, ne jamais inventer de coordonnées GPS.
   - Types disponibles et leur signification :
     * 'gare' : Gare ferroviaire SNCF
@@ -116,6 +133,7 @@ RÈGLES CRITIQUES :
 - nom_commune est en **casse mixte** (ex: 'Vannes', 'Bouvron') → TOUJOURS utiliser lower(nom_commune) pour comparer
 - Toujours filtrer: WHERE est_valide = TRUE (sur transactions)
 - Toujours utiliser PERCENTILE_CONT(0.5) pour les médianes (jamais AVG pour les prix)
+- Pour toute recherche de gare ferroviaire (train station) : utiliser impérativement type = 'gare' (et non 'transport' qui désigne uniquement les arrêts de bus).
 - Limites de lignes : Pour les requêtes textuelles classiques, limiter à 50 maximum. Pour les requêtes cartographiques (quand l'utilisateur demande une carte, de situer, ou de localiser), utiliser un LIMIT 1000 et s'assurer de sélectionner latitude et longitude dans le SELECT.
 - Agrégation pour graphiques : Si l'utilisateur demande un graphique, une évolution, une distribution ou une répartition, utiliser des fonctions d'agrégation (comme COUNT(*), AVG(), ou PERCENTILE_CONT(0.5)) et un GROUP BY approprié (par exemple par classe DPE dpe_classe, par type local type_local, ou par trimestre date_trunc('quarter', date_mutation) ou par année). Ne jamais renvoyer des dizaines de lignes individuelles si la question demande une vue d'ensemble ou une comparaison graphique.
 """
@@ -489,8 +507,11 @@ Tu dois impérativement renvoyer un objet JSON strict au format suivant (sans ba
 }
 
 IMPORTANT POUR LA CARTE :
-Dans "map_config.poi_markers", n'inclure que les points de repère très spécifiques/uniques (par exemple, le centre de la commune ou un POI de référence unique autour duquel on cherche).
+Dans "map_config.poi_markers", n'inclure que les points de repère très spécifiques/uniques (par exemple, le centre de la commune ou un ou plusieurs POI de référence uniques autour desquels on cherche).
+- Si la question implique une recherche de proximité ou de distance autour de points de repère (ex: "à 20 min à pied de X", "à moins de 2km de Y"), tu DOIS impérativement inclure ces points de repère dans "poi_markers" pour qu'ils soient positionnés sur la carte. Ne les laisse pas de côté.
+- Si l'utilisateur cherche autour de plusieurs points de repère (ex: "un Fitness Park ou un Basic Fit", "la gare ou l'université"), tu DOIS inclure CHAQUE point de repère de manière distincte dans le tableau "poi_markers" (ex: un marker pour Fitness Park et un marker séparé pour Basic-Fit). Ne les fusionne JAMAIS en un seul marker textuel fictif comme "Fitness Park ou Basic Fit".
 - "type" doit être le type de ce point d'intérêt s'il est connu (ex: 'salle_sport', 'gare', 'ecole', 'universite', 'cinema', 'restaurant', 'pharmacie', 'commerce', 'transport', 'parking'). Cela permet d'afficher l'émoticône appropriée.
+- Si le point de repère de référence est une gare ferroviaire (ex: gare de Vannes, gare de Chantenay), son type dans "poi_markers" doit être impérativement "gare" (pour afficher l'icône de train 🚂) et non "transport" (qui correspond aux bus 🚌).
 - Ne JAMAIS lister tous les points retournés par la requête SQL dans "poi_markers" car le serveur s'occupe de les ajouter automatiquement sur la carte via une post-analyse. Laisse "poi_markers" vide ([]) par défaut si la question ne demande pas d'afficher un repère précis en plus des biens/POIs.
 
 Règles de décision visuelle :
@@ -563,6 +584,134 @@ Règles de décision visuelle :
                 parsed["map_config"] = {}
             parsed["map_config"]["markers"] = markers
             
+            # Corriger les coordonnées des poi_markers à partir de la base de données (points_interet) pour éviter toute hallucination de localisation
+            if "map_config" in parsed and "poi_markers" in parsed["map_config"] and parsed["map_config"]["poi_markers"]:
+                # Calculer le centre des transactions pour orienter la recherche
+                valid_coords = [
+                    (float(m["lat"]), float(m["lng"])) for m in markers if m.get("lat") and m.get("lng")
+                ]
+                center_lat, center_lng = None, None
+                if valid_coords:
+                    center_lat = sum(c[0] for c in valid_coords) / len(valid_coords)
+                    center_lng = sum(c[1] for c in valid_coords) / len(valid_coords)
+
+                corrected_poi_markers = []
+
+                def _dist(lat1, lon1, lat2, lon2):
+                    import math
+                    R = 6371.0
+                    dlat = math.radians(lat2 - lat1)
+                    dlon = math.radians(lon2 - lon1)
+                    a = (math.sin(dlat / 2) ** 2 +
+                         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+                    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+                    return R * c * 1000.0
+
+                for marker in parsed["map_config"]["poi_markers"]:
+                    poi_type = marker.get("type")
+                    poi_name = marker.get("popup") or ""
+                    
+                    # Nettoyage du nom pour la recherche
+                    clean_name = poi_name.lower()
+                    if poi_type == "gare":
+                        # Pour les gares, on cherche le nom de la ville
+                        # ex: "Gare de Vannes" -> "vannes"
+                        clean_name = clean_name.replace("la gare de ", "").replace("gare de ", "").replace("gare d'", "").replace("gare de la ", "")
+                        clean_name = clean_name.strip()
+                    elif poi_type == "salle_sport":
+                        if "fitness" in clean_name or "park" in clean_name:
+                            clean_name = "fitness park"
+                        elif "basic" in clean_name or "fit" in clean_name:
+                            clean_name = "basic fit"
+                        else:
+                            for c in ["vannes", "nantes", "reze", "lorient", "brest", "hennebont", "bouvron"]:
+                                clean_name = clean_name.replace(f" de {c}", "").replace(f" d'{c}", "").replace(f" à {c}", "").replace(f" {c}", "")
+                            clean_name = clean_name.strip()
+                    else:
+                        for c in ["vannes", "nantes", "reze", "lorient", "brest", "hennebont", "bouvron"]:
+                            clean_name = clean_name.replace(f" de {c}", "").replace(f" d'{c}", "").replace(f" à {c}", "").replace(f" {c}", "")
+                        clean_name = clean_name.strip()
+                    
+                    if clean_name:
+                        # Récupérer tous les POIs du type et nom correspondants
+                        sql_lookup = """
+                            SELECT latitude, longitude, nom, type
+                            FROM points_interet
+                            WHERE (type = %s OR %s IS NULL)
+                              AND (
+                                replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = %s
+                                OR lower(nom) LIKE %s
+                              )
+                        """
+                        norm_name = clean_name.replace(" ", "").replace("-", "")
+                        db_pois = query(sql_lookup, (poi_type, poi_type, norm_name, f"%{clean_name}%"))
+                        
+                        if db_pois:
+                            matched_any = False
+                            if valid_coords:
+                                # Associer tous les POIs qui sont à moins de 2km d'au moins une transaction
+                                for poi in db_pois:
+                                    poi_lat = float(poi["latitude"])
+                                    poi_lng = float(poi["longitude"])
+                                    if any(_dist(poi_lat, poi_lng, tx_lat, tx_lng) <= 2000 for tx_lat, tx_lng in valid_coords):
+                                        corrected_poi_markers.append({
+                                            "lat": poi_lat,
+                                            "lng": poi_lng,
+                                            "popup": poi["nom"] or poi_name,
+                                            "type": poi["type"] or poi_type
+                                        })
+                                        matched_any = True
+                            
+                            # Fallback si aucun POI n'est à moins de 2km d'une transaction, ou si pas de transactions
+                            if not matched_any:
+                                if center_lat is not None and center_lng is not None:
+                                    sql_closest = """
+                                        SELECT latitude, longitude, nom, type
+                                        FROM points_interet
+                                        WHERE (type = %s OR %s IS NULL)
+                                          AND (
+                                            replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = %s
+                                            OR lower(nom) LIKE %s
+                                          )
+                                        ORDER BY 
+                                          geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+                                          id LIMIT 1
+                                    """
+                                    db_pois_closest = query(sql_closest, (poi_type, poi_type, norm_name, f"%{clean_name}%", center_lng, center_lat))
+                                else:
+                                    sql_closest = """
+                                        SELECT latitude, longitude, nom, type
+                                        FROM points_interet
+                                        WHERE (type = %s OR %s IS NULL)
+                                          AND (
+                                            replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = %s
+                                            OR lower(nom) LIKE %s
+                                          )
+                                        ORDER BY 
+                                          CASE WHEN replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = %s THEN 0 ELSE 1 END,
+                                          id LIMIT 1
+                                    """
+                                    db_pois_closest = query(sql_closest, (poi_type, poi_type, norm_name, f"%{clean_name}%", norm_name))
+                                
+                                if db_pois_closest:
+                                    corrected_poi_markers.append({
+                                        "lat": float(db_pois_closest[0]["latitude"]),
+                                        "lng": float(db_pois_closest[0]["longitude"]),
+                                        "popup": db_pois_closest[0]["nom"] or poi_name,
+                                        "type": db_pois_closest[0]["type"] or poi_type
+                                    })
+                
+                # Dédupliquer les marqueurs
+                seen_markers = set()
+                dedup_poi_markers = []
+                for m in corrected_poi_markers:
+                    key = (round(m["lat"], 5), round(m["lng"], 5))
+                    if key not in seen_markers:
+                        seen_markers.add(key)
+                        dedup_poi_markers.append(m)
+                
+                parsed["map_config"]["poi_markers"] = dedup_poi_markers
+
             if markers:
                 avg_lat = sum(m["lat"] for m in markers) / len(markers)
                 avg_lng = sum(m["lng"] for m in markers) / len(markers)
