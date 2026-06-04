@@ -617,6 +617,13 @@ Règles de décision visuelle :
                     seen.add(key)
                     details = []
                     is_atypical = False
+                    # Afficher le type de bien en premier (utile quand aucun filtre de type)
+                    type_loc_display = row.get("type_local")
+                    if type_loc_display:
+                        # Raccourcir pour l'affichage
+                        if "Local industriel" in type_loc_display or "commercial" in type_loc_display:
+                            type_loc_display = "Local professionnel"
+                        details.append(f"🏠 {type_loc_display}")
                     if row.get("prix_m2"):
                         details.append(f"{row['prix_m2']} €/m²")
                         try:
