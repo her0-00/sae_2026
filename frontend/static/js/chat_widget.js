@@ -1388,6 +1388,7 @@
             commerce: { emoji: '🛒', color: '#0284c7' },
             transport: { emoji: '🚌', color: '#6366f1' },
             parking: { emoji: '🚗', color: '#64748b' },
+            aeroport: { emoji: '🛫', color: '#0ea5e9' },
         };
 
         config = config || {};

@@ -39,7 +39,10 @@ def query(sql, params=None, fetchone=False):
     """Exécute une requête SELECT et retourne les résultats en dict."""
     with get_db() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql, params or ())
+            if params is not None:
+                cur.execute(sql, params)
+            else:
+                cur.execute(sql)
             if fetchone:
                 return _cast_row(cur.fetchone())
             return [_cast_row(r) for r in cur.fetchall()]
@@ -49,5 +52,8 @@ def execute(sql, params=None):
     """Exécute une requête INSERT/UPDATE/DELETE."""
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, params or ())
+            if params is not None:
+                cur.execute(sql, params)
+            else:
+                cur.execute(sql)
         conn.commit()

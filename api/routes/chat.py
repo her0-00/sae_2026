@@ -123,6 +123,7 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
 - Pour rechercher un POI par nom, normaliser avec `replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '')` et comparer avec le nom sans tirets ni espaces (ex: 'basicfit', 'fitnespark'). Ne JAMAIS utiliser LIKE/ILIKE avec le caractère `%`.
 - IMPORTANT POUR LES GARES : Le nom d'une gare (type = 'gare') dans la base de données correspond uniquement au nom de la commune elle-même (ex: 'vannes' pour la gare de Vannes, 'nantes' pour la gare de Nantes, 'chantenay' pour la gare de Chantenay). Donc, pour chercher la gare de Vannes, filtrer par type = 'gare' et par le nom de la ville : `type = 'gare' AND replace(replace(lower(COALESCE(nom,'')), '-', ''), ' ', '') = 'vannes'`. Ne JAMAIS chercher 'garedevannes' ou 'garedenantes' dans le nom du POI.
 - Pour tout POI référencé dans points_interet : TOUJOURS utiliser une sous-requête pour récupérer ses coordonnées, ne jamais inventer de coordonnées GPS.
+- **Rues et Adresses** : Si l'utilisateur mentionne une rue ou une adresse (ex: 'Rue du Four', 'Rue de la Paix', 'Rue des Alizés'), ce n'est PAS un point d'intérêt (`points_interet`). Pour filtrer les transactions sur cette rue ou pour trouver ses coordonnées spatiales de référence, utiliser la clause `t.adresse_normalisee LIKE '%nom_de_la_rue%'` (ex: `t.adresse_normalisee LIKE '%rue du four%'`) sur la table `transactions` (ou `dpe`). Ne jamais chercher une rue/adresse dans la table `points_interet`.
   - Types disponibles et leur signification :
     * 'gare' : Gare ferroviaire SNCF
     * 'ecole' : Établissement scolaire (primaire, collège, lycée)
@@ -134,6 +135,9 @@ Tables PostgreSQL disponibles (base ImmoBI — données immobilières française
     * 'commerce' : Supermarché, boulangerie, commerce de proximité
     * 'transport' : Arrêt de bus ou de tramway
     * 'parking' : Parking public
+- ⚠ **Aéroports** : Le type `'aeroport'` n'existe PAS dans `points_interet`. Les aéroports ne sont présents que dans la table `transactions` (colonne `peb_aeroport`). Pour obtenir les aéroports avec leur localisation moyenne (nécessaire pour les afficher sur la carte), utiliser :
+  `SELECT peb_aeroport AS nom, AVG(latitude) AS latitude, AVG(longitude) AS longitude, 'aeroport' AS type FROM transactions WHERE peb_aeroport IS NOT NULL GROUP BY peb_aeroport`
+
 
 RÈGLES CRITIQUES :
 - nom_commune est en **casse mixte** (ex: 'Vannes', 'Bouvron') → TOUJOURS utiliser lower(nom_commune) pour comparer
