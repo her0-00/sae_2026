@@ -267,12 +267,12 @@
 
   <!-- Stats row -->
   <div class="stats-row">
-    <div class="stat-card"><div class="n">6</div><div class="l">Sources de données</div></div>
-    <div class="stat-card"><div class="n">5</div><div class="l">Étapes Dagster</div></div>
-    <div class="stat-card"><div class="n">6</div><div class="l">Tables PostgreSQL</div></div>
+    <div class="stat-card"><div class="n">7</div><div class="l">Sources de données</div></div>
+    <div class="stat-card"><div class="n">6</div><div class="l">Étapes Dagster</div></div>
+    <div class="stat-card"><div class="n">7</div><div class="l">Tables PostgreSQL</div></div>
     <div class="stat-card"><div class="n">4</div><div class="l">Vues matérialisées</div></div>
-    <div class="stat-card"><div class="n">6</div><div class="l">Blueprints API</div></div>
-    <div class="stat-card"><div class="n">4</div><div class="l">Pages frontend</div></div>
+    <div class="stat-card"><div class="n">7</div><div class="l">Blueprints API</div></div>
+    <div class="stat-card"><div class="n">5</div><div class="l">Pages frontend</div></div>
     <div class="stat-card"><div class="n">5</div><div class="l">Années de données</div></div>
   </div>
 
@@ -311,6 +311,10 @@
           <span>🔇</span>
           <div><div class="chip-em">DGAC — PEB</div><div class="chip-desc">Plans d'exposition au bruit aéroport</div></div>
         </div>
+        <div class="chip chip-source">
+          <span>🏠</span>
+          <div><div class="chip-em">Carte des loyers 2025</div><div class="chip-desc">Loyers médians /m² par commune (Ministère)</div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -341,6 +345,7 @@
         <div class="pipeline-branch">
           <div class="pipeline-step"><div class="step-n">3</div>peb<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">National</div></div>
           <div class="pipeline-step"><div class="step-n">3</div>filosofi<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">National</div></div>
+          <div class="pipeline-step"><div class="step-n">3</div>loyers<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">National</div></div>
         </div>
         <div class="pipeline-arrow">→</div>
         <div class="pipeline-step"><div class="step-n">4</div>enrichissement<div class="chip-desc" style="font-weight:400;font-size:.72rem;margin-left:.3rem">Spatial joins</div></div>
@@ -405,6 +410,10 @@
           <div class="db-table-desc">Gares SNCF et établissements scolaires (OSM)</div>
         </div>
         <div class="db-table">
+          <div class="db-table-name">communes_loyers</div>
+          <div class="db-table-desc">Loyers médians /m² appartement & maison par commune (Carte des loyers 2025)</div>
+        </div>
+        <div class="db-table">
           <div class="db-table-name">quality_log</div>
           <div class="db-table-desc">Traçabilité des contrôles qualité (taux géocodage, FK…)</div>
         </div>
@@ -442,7 +451,7 @@
       <div>
         <div class="layer-title">API Backend — Flask + Python</div>
       </div>
-      <span class="layer-subtitle">api/ · 6 Blueprints · Flask-Caching · CORS</span>
+      <span class="layer-subtitle">api/ · 7 Blueprints · Flask-Caching · CORS</span>
     </div>
     <div class="layer-body">
       <div class="api-grid">
@@ -480,7 +489,19 @@
         </div>
         <div class="api-route">
           <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/ecole</div><div class="api-desc">Prix par tranche distance école</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
           <div><div class="api-path">/api/analyses/pois</div><div class="api-desc">Gares & écoles dans une commune</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/ges</div><div class="api-desc">Distribution des émissions GES (classe A–G)</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method get">GET</span>
+          <div><div class="api-path">/api/analyses/construction</div><div class="api-desc">Prix médian par époque de construction</div></div>
         </div>
         <div class="api-route">
           <span class="api-method get">GET</span>
@@ -493,6 +514,10 @@
         <div class="api-route">
           <span class="api-method get">GET</span>
           <div><div class="api-path">/api/carte/transactions</div><div class="api-desc">Transactions géolocalisées (carte)</div></div>
+        </div>
+        <div class="api-route">
+          <span class="api-method post">POST</span>
+          <div><div class="api-path">/api/chat</div><div class="api-desc">Copilot IA — Text-to-SQL + streaming SSE</div></div>
         </div>
       </div>
     </div>
@@ -551,13 +576,61 @@
             <span class="lib-tag">Ranking</span>
           </div>
         </div>
+        <div class="front-page">
+          <div class="front-page-icon">🏗️</div>
+          <div class="front-page-name">Architecture</div>
+          <div class="front-page-url">/architecture</div>
+          <div class="front-page-libs">
+            <span class="lib-tag">Stack technique</span>
+            <span class="lib-tag">Soutenance</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
 
-  <!-- ── LAYER 6 : Déploiement ── -->
+  <!-- ── LAYER 6 : Copilot IA ── -->
+  <div class="layer" style="--c-layer:#7c3aed;border-color:#c4b5fd">
+    <div class="layer-header" style="background:#f5f3ff;border-color:#c4b5fd;color:#7c3aed;border-radius:12px 12px 0 0;border:1.5px solid #c4b5fd;border-bottom:none;display:flex;align-items:center;gap:.75rem;padding:.8rem 1.25rem">
+      <span class="layer-icon">🤖</span>
+      <div>
+        <div class="layer-title" style="font-size:1rem;font-weight:800;letter-spacing:-.01em">ImmoBI Copilot — Assistant IA</div>
+      </div>
+      <span class="layer-subtitle" style="font-size:.8rem;font-weight:400;opacity:.75;margin-left:auto">Azure OpenAI · Text-to-SQL · Streaming SSE</span>
+    </div>
+    <div class="layer-body" style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-top:none;border-radius:0 0 12px 12px;padding:1.25rem">
+      <div class="join-card">
+        <div class="section-label" style="margin-bottom:.6rem">Pipeline de réponse</div>
+        <div class="join-row">
+          <span class="join-badge" style="background:#ede9fe;color:#6d28d9">Étape 1</span>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">Détection de commune + contexte DB</div>
+            <div style="font-size:.77rem;color:#64748b;margin-top:.1rem">1 seule requête SQL combinée pour récupérer prix, bruit, DPE, loyers en parallèle (vs 4 requêtes séquentielles avant)</div>
+          </div>
+        </div>
+        <div class="join-row">
+          <span class="join-badge" style="background:#ede9fe;color:#6d28d9">Étape 2</span>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">Text-to-SQL avec retry automatique</div>
+            <div style="font-size:.77rem;color:#64748b;margin-top:.1rem">Le LLM génère une requête SQL depuis la question → exécution PostgreSQL → si erreur : feedback injecté dans le contexte et retry (max 3 tentatives)</div>
+          </div>
+        </div>
+        <div class="join-row">
+          <span class="join-badge" style="background:#ede9fe;color:#6d28d9">Étape 3</span>
+          <div>
+            <div style="font-weight:600;font-size:.83rem">Réponse streamée (Server-Sent Events)</div>
+            <div style="font-size:.77rem;color:#64748b;margin-top:.1rem">Le texte s'affiche mot par mot via SSE — premier token visible en &lt; 1s. Singleton client Azure OpenAI instancié une seule fois au démarrage.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-arrow"><div class="arch-arrow-head">↓</div></div>
+
+  <!-- ── LAYER 7 : Déploiement ── -->
   <div class="layer layer-deploy">
     <div class="layer-header">
       <span class="layer-icon">🚀</span>
