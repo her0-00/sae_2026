@@ -616,14 +616,22 @@ Règles de décision visuelle :
                         continue
                     seen.add(key)
                     details = []
+                    is_atypical = False
                     if row.get("prix_m2"):
                         details.append(f"{row['prix_m2']} €/m²")
+                        try:
+                            if float(row["prix_m2"]) > 10000:
+                                is_atypical = True
+                        except (ValueError, TypeError):
+                            pass
                     if row.get("surface_bati"):
                         details.append(f"{row['surface_bati']} m²")
                     if row.get("dpe_classe"):
                         details.append(f"DPE: {row['dpe_classe']}")
                     if row.get("valeur_fonciere"):
                         details.append(f"Valeur: {row['valeur_fonciere']} €")
+                    if is_atypical:
+                        details.append("⚠️ Prix atypique")
                     
                     popup_details = " | ".join(details)
                     type_loc = row.get("type_local", "Bien")

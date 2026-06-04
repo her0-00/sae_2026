@@ -197,6 +197,7 @@
           <select id="f-type">
             <option value="Appartement">Appartement</option>
             <option value="Maison">Maison</option>
+            <option value="Local industriel. commercial ou assimilé">Local professionnel</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:.6rem">
@@ -609,9 +610,10 @@
             iconAnchor: [25, 12]
           });
           
+          const isAtypical = tx.prix_m2 && parseFloat(tx.prix_m2) > 10000;
           const popupContent = `
             <div class="tx-popup">
-              <strong>${fmtN(tx.valeur_fonciere)} €</strong><br>
+              <strong>${fmtN(tx.valeur_fonciere)} €</strong>${isAtypical ? ' <span style="color:#ef4444;font-size:0.75rem;font-weight:700;">⚠️ Atypique</span>' : ''}<br>
               ${tx.surface_bati} m² (${fmtN(Math.round(tx.prix_m2))} €/m²)<br>
               DPE: ${tx.dpe_classe || 'Non renseigné'}<br>
               <span class="text-muted" style="font-size:0.75rem">${new Date(tx.date_mutation).toLocaleDateString('fr-FR')}</span>
