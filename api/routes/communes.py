@@ -40,12 +40,16 @@ def resume_commune(code):
             p.prix_m2_median,
             p.nb_transactions,
             p.type_local,
-            p.annee
+            p.annee,
+            l.loyer_m2_appartement,
+            l.loyer_m2_maison
         FROM communes_stats c
         LEFT JOIN prix_m2_par_commune p
             ON p.commune_code = c.commune_code
            AND p.annee = EXTRACT(YEAR FROM NOW()) - 1
            AND p.type_local = 'Appartement'
+        LEFT JOIN communes_loyers l
+            ON l.commune_code = c.commune_code
         WHERE c.commune_code = %s
         LIMIT 1
         """,

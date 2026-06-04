@@ -365,6 +365,34 @@
           Basé sur ${fmtN(est.nb_comparables)} transactions similaires (24 mois)
         </div>
 
+        <!-- Estimation Locative -->
+        ${est.loyer_m2_commune ? `
+        <div class="alert alert-success mt-2" style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 1rem; border-radius: var(--r); margin-top: 1.25rem; margin-bottom: 0.5rem;">
+          <h4 style="color:#10b981; font-weight:700; margin:0 0 0.4rem 0; font-size: 0.88rem; display:flex; align-items:center; gap:0.4rem;">
+            🔑 Estimation Locative
+          </h4>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem;">
+            <span>Loyer mensuel estimé (hors charges) :</span>
+            <strong style="color:var(--text); font-weight:800; font-size:1.1rem;">${fmt(est.loyer_mensuel_estime)} / mois</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; margin-top:0.25rem;">
+            <span>Loyer de référence de la commune (HC) :</span>
+            <strong style="color:var(--text); font-weight:700;">${est.loyer_m2_commune.toFixed(2)} €/m²</strong>
+          </div>
+          ${est.rendement_locatif_brut ? `
+          <div style="margin-top:0.75rem; border-top:1px solid rgba(16, 185, 129, 0.2); padding-top:0.6rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.78rem;">
+              <span>Rendement locatif brut estimé :</span>
+              <strong style="color:#10b981; font-weight:800; font-size:1rem;">${est.rendement_locatif_brut} %</strong>
+            </div>
+            <div style="font-size:0.7rem; color:var(--muted); margin-top:0.25rem; line-height:1.35;">
+              * Le rendement brut représente la rentabilité brute annuelle du bien : <code>(loyer annuel hors charges / prix d'achat) × 100</code>.
+            </div>
+          </div>
+          ` : ""}
+        </div>
+        ` : ""}
+
         ${prixDemande ? `
         <!-- Percentile bar -->
         <div class="percentile-wrap mt-2">
@@ -545,11 +573,28 @@
           <div class="dim-card" style="--dim-color:var(--primary)">
             <div class="dim-icon">💰</div>
             <div class="dim-label">Prix</div>
-            <div class="dim-value">${fmt(est.prix_m2_median)} /m² médian</div>
+            <div class="dim-value">${fmt(est.prix_m2_median)} /m² inférieur/médian</div>
             <div class="dim-detail">${prixDemande ? `Demandé : ${fmt(prixDemande / body.surface)} /m²` : `Surface : ${body.surface} m² → ${fmt(est.prix_estime)}`}</div>
             <div class="dim-score ${prixDemande ? (score === "excellent" || score === "bon" ? "good" : score === "correct" ? "ok" : "bad") : "na"}"
                  title="${prixDemande ? (score === 'excellent' ? 'A : Excellent deal (<= 25% les moins chers)' : score === 'bon' ? 'B : Bon prix (<= médiane)' : score === 'correct' ? 'C : Prix correct (<= 75% du marché)' : 'D : Cher (> 75% du marché, négocier)') : 'Entrez un prix demandé pour calculer le score de l\'offre'}">
               ${prixDemande ? (score === "excellent" ? "A" : score === "bon" ? "B" : score === "correct" ? "C" : "D") : "?"}
+            </div>
+          </div>
+
+          <!-- Rendement & Location -->
+          <div class="dim-card" style="--dim-color:#10b981">
+            <div class="dim-icon">🔑</div>
+            <div class="dim-label">Rendement & Location</div>
+            <div class="dim-value">
+              ${est.loyer_m2_commune ? `${est.loyer_m2_commune.toFixed(2)} €/m² (hors charges)` : "Données loyers non dispo"}
+            </div>
+            <div class="dim-detail">
+              ${est.loyer_mensuel_estime ? `Loyer est. : <strong>${fmt(est.loyer_mensuel_estime)}/mois (HC)</strong>` : ""}
+              ${est.rendement_locatif_brut ? ` · Rendement brut : <strong>${est.rendement_locatif_brut}%</strong>` : ""}
+            </div>
+            <div class="dim-score ${est.rendement_locatif_brut ? (est.rendement_locatif_brut >= 6.0 ? 'good' : est.rendement_locatif_brut >= 4.0 ? 'ok' : 'bad') : 'na'}"
+                 title="${est.rendement_locatif_brut ? (est.rendement_locatif_brut >= 6.0 ? 'A : Excellent rendement locatif (>= 6%). Le rendement locatif brut mesure le rapport entre le loyer annuel hors charges et le prix d\'achat.' : est.rendement_locatif_brut >= 4.0 ? 'B : Rendement moyen/correct (4% - 6%). Le rendement locatif brut mesure le rapport entre le loyer annuel hors charges et le prix d\'achat.' : 'C : Rendement faible (< 4%). Le rendement locatif brut mesure le rapport entre le loyer annuel hors charges et le prix d\'achat.') : 'Données insuffisantes pour calculer le rendement'}">
+              ${est.rendement_locatif_brut ? (est.rendement_locatif_brut >= 6.0 ? 'A' : est.rendement_locatif_brut >= 4.0 ? 'B' : 'C') : '?'}
             </div>
           </div>
 

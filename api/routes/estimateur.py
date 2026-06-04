@@ -268,6 +268,32 @@ def estimer():
     else:
         score_walkability = "faible"
 
+    # ── ESTIMATEUR DE LOYER & RENDEMENT LOCATIF ──
+    loyer_m2 = None
+    loyer_mensuel_estime = None
+    rendement_locatif_brut = None
+
+    loyer_row = query(
+        """
+        SELECT loyer_m2_appartement, loyer_m2_maison
+        FROM communes_loyers
+        WHERE commune_code = %s
+        """,
+        (commune_code,),
+        fetchone=True
+    )
+    if loyer_row:
+        if type_local == "Appartement":
+            loyer_m2 = loyer_row.get("loyer_m2_appartement")
+        else:
+            loyer_m2 = loyer_row.get("loyer_m2_maison")
+
+    if loyer_m2 is not None and surface:
+        loyer_m2 = float(loyer_m2)
+        loyer_mensuel_estime = round(loyer_m2 * surface)
+        if prix_estime:
+            rendement_locatif_brut = round(((loyer_mensuel_estime * 12) / prix_estime) * 100, 2)
+
     return jsonify({
         "commune_code":      commune_code,
         "type_local":        type_local,
@@ -309,5 +335,8 @@ def estimer():
         "commodites": commodites,
         "score_walkability": score_walkability,
         "nb_commodites_1km": nb_commodites_1km,
+        "loyer_m2_commune":  loyer_m2,
+        "loyer_mensuel_estime": loyer_mensuel_estime,
+        "rendement_locatif_brut": rendement_locatif_brut,
     })
 

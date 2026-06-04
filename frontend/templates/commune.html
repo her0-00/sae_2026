@@ -187,6 +187,14 @@
         }
       }
 
+      // Calcul Loyer & Rendement
+      const loyer_m2 = type === "Appartement" ? parseFloat(r.loyer_m2_appartement) : parseFloat(r.loyer_m2_maison);
+      let yieldBadge = "";
+      if (loyer_m2 && r.prix_m2_median) {
+        const yieldVal = ((loyer_m2 * 12) / parseFloat(r.prix_m2_median)) * 100;
+        yieldBadge = `<span class="market-badge market-stable" style="background:rgba(16,185,129,.1); color:#10b981; border:1px solid rgba(16,185,129,.2);">🔑 Rdt brut : ${yieldVal.toFixed(2)}%</span>`;
+      }
+
       D("result").innerHTML = `
   <!-- KPI strip -->
   <div class="kpi-strip" style="margin-bottom:1.5rem">
@@ -194,6 +202,11 @@
       <div class="kpi-val">${r.prix_m2_median ? fmtN(r.prix_m2_median) + "€" : "—"}</div>
       <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Prix médian /m² ⓘ</div>
       ${mktBadge ? `<div style="margin-top:.3rem">${mktBadge}</div>` : ""}
+    </div>
+    <div class="kpi" style="cursor:help;" title="Loyer de référence médian /m² hors charges estimé (ANIL/Ministère de la Transition Écologique). Le rendement locatif brut (Rdt brut) mesure le rapport annuel hors charges : (loyer de référence × 12 / prix médian /m²) × 100.">
+      <div class="kpi-val">${loyer_m2 ? fmtN(loyer_m2) + " €/m²" : "—"}</div>
+      <div class="kpi-lbl" style="display:flex; align-items:center; justify-content:center; gap:0.25rem;">Loyer médian /m² (HC) ⓘ</div>
+      ${yieldBadge ? `<div style="margin-top:.3rem">${yieldBadge}</div>` : ""}
     </div>
     <div class="kpi" style="cursor:help;" title="Nombre de ventes immobilières enregistrées par an dans la commune (DVF).">
       <div class="kpi-val">${r.nb_transactions ? fmtN(r.nb_transactions) : "—"}</div>

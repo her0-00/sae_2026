@@ -7,6 +7,7 @@ from scripts import (
     load_peb,
     load_poi,
     load_filosofi,
+    load_loyers,
     load_enrichment,
     load_quality,
     config as app_config
@@ -91,6 +92,12 @@ def filosofi():
     load_filosofi.main()
 
 
+@asset(group_name="ingestion", description="Indicateurs de loyers par commune (National, 1 fois)")
+def loyers():
+    log.info("Lancement loyers")
+    load_loyers.main()
+
+
 # ─── ÉTAPE 4 : Enrichissement (à lancer APRÈS les assets d'ingestion) ────────
 # Note: dvf/dpe/poi sont partitionnés → Dagster ne permet pas de les déclarer
 # comme dépendances formelles d'un asset non-partitionné.
@@ -98,7 +105,7 @@ def filosofi():
 @asset(
     group_name="enrichment",
     description="4/4 — Croisement spatial et enrichissement de TOUTES les transactions (lancer après ingestion)",
-    deps=[peb, filosofi],
+    deps=[peb, filosofi, loyers],
 )
 def enrichissement():
     log.info("Lancement enrichissement")
