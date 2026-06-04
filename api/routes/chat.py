@@ -615,12 +615,20 @@ Règles de décision visuelle :
                     if key in seen:
                         continue
                     seen.add(key)
-                    prix = f"{row['prix_m2']} €/m²" if row.get("prix_m2") else ""
-                    dpe = f" | DPE: {row['dpe_classe']}" if row.get("dpe_classe") else ""
-                    valeur = f" | Valeur: {row['valeur_fonciere']} €" if row.get("valeur_fonciere") else ""
+                    details = []
+                    if row.get("prix_m2"):
+                        details.append(f"{row['prix_m2']} €/m²")
+                    if row.get("surface_bati"):
+                        details.append(f"{row['surface_bati']} m²")
+                    if row.get("dpe_classe"):
+                        details.append(f"DPE: {row['dpe_classe']}")
+                    if row.get("valeur_fonciere"):
+                        details.append(f"Valeur: {row['valeur_fonciere']} €")
+                    
+                    popup_details = " | ".join(details)
                     type_loc = row.get("type_local", "Bien")
                     title_info = row.get("nom") or row.get("adresse") or row.get("adresse_normalisee") or type_loc
-                    popup = f"<b>{title_info}</b><br>{prix}{dpe}{valeur}"
+                    popup = f"<b>{title_info}</b><br>{popup_details}"
                     markers.append({
                         "lat": float(row["latitude"]),
                         "lng": float(row["longitude"]),
