@@ -832,7 +832,7 @@ def chat_copilot():
     # ── Phase 2 : Réponse en streaming ────────────────────────────────────────
     def generate():
         try:
-            yield f"data: {json.dumps({'widget': widget_config})}\n\n"
+            yield f"data: {json.dumps({'widget': widget_config, 'sql': sql_used})}\n\n"
             try:
                 stream = client.chat.completions.create(
                     model=deployment,

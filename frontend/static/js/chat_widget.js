@@ -1053,7 +1053,7 @@
     // Restaurer l'historique dans le DOM
     if (messagesHistory.length > 0) {
         messagesHistory.forEach(msg => {
-            appendMessage(msg.content, msg.role === "assistant" ? "assistant" : "user", msg.widget);
+            appendMessage(msg.content, msg.role === "assistant" ? "assistant" : "user", msg.widget, msg.sql);
         });
 
         // Rendre automatiquement le dernier widget disponible de l'historique au chargement
@@ -1615,12 +1615,13 @@
         messagesHistory.push({ role: "user", content: text });
         localStorage.setItem("realestatebi_chat_history", JSON.stringify(messagesHistory));
 
-        const typingEl = appendTypingIndicator();
+        let typingEl = appendTypingIndicator();
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
         let assistantEl = null;
         let fullContent = "";
         let receivedWidget = null;
+        let receivedSql = null;
 
         try {
             const res = await fetch("/api/chat", {
@@ -1677,6 +1678,9 @@
                             receivedWidget = parsed.widget;
                             handleWidgetResponse(parsed.widget);
                         }
+                        if (parsed.sql) {
+                            receivedSql = parsed.sql;
+                        }
                         if (parsed.c) {
                             fullContent += parsed.c;
                             assistantEl.innerHTML = parseMarkdown(fullContent);
@@ -1687,10 +1691,13 @@
             }
 
             if (fullContent) {
-                messagesHistory.push({ role: "assistant", content: fullContent, widget: receivedWidget });
+                messagesHistory.push({ role: "assistant", content: fullContent, widget: receivedWidget, sql: receivedSql });
                 localStorage.setItem("realestatebi_chat_history", JSON.stringify(messagesHistory));
                 if (receivedWidget && receivedWidget.type !== "none") {
                     addWidgetBadgeToBubble(assistantEl, receivedWidget);
+                }
+                if (receivedSql) {
+                    addSqlDetailsToBubble(assistantEl, receivedSql);
                 }
             }
 
@@ -1737,15 +1744,34 @@
         bubbleEl.appendChild(badge);
     }
 
-    function appendMessage(content, role, widget = null) {
+    function appendMessage(content, role, widget = null, sql = null) {
         const msg = document.createElement("div");
         msg.className = `realestatebi-msg realestatebi-msg-${role}`;
         msg.innerHTML = parseMarkdown(content);
         if (widget && widget.type !== "none") {
             addWidgetBadgeToBubble(msg, widget);
         }
+        if (sql) {
+            addSqlDetailsToBubble(msg, sql);
+        }
         chatMessagesEl.appendChild(msg);
         return msg;
+    }
+
+    function addSqlDetailsToBubble(bubbleEl, sql) {
+        if (!sql || !bubbleEl) return;
+        const details = document.createElement("details");
+        details.className = "realestatebi-chat-sql-details";
+        details.style.cssText = "margin-top: 8px; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;";
+        details.innerHTML = `
+            <summary style="cursor: pointer; color: #38bdf8; font-weight: 600; outline: none; user-select: none;">🔍 Voir la requête SQL générée</summary>
+            <pre style="background: #0f172a; padding: 10px; border-radius: 6px; margin-top: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #a5f3fc; border: 1px solid #1e293b; line-height: 1.4; white-space: pre-wrap; word-break: break-all;"><code class="language-sql">${escapeHtml(sql)}</code></pre>
+        `;
+        bubbleEl.appendChild(details);
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     function appendTypingIndicator() {
