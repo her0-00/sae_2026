@@ -27,7 +27,7 @@ def _get_client() -> AzureOpenAI | None:
 
 # ── Schéma DB injecté dans le prompt SQL ──────────────────────────────────────
 _SCHEMA = """
-Tables PostgreSQL disponibles (base ImmoBI — données immobilières françaises) :
+Tables PostgreSQL disponibles (base RealEstateBI — données immobilières françaises) :
 
 **transactions** (mutations immobilières DVF) :
   commune_code   TEXT     -- code INSEE de la commune (ex: '56260' pour Vannes)
@@ -423,7 +423,7 @@ def _format_results_as_context(results: list[dict], sql: str, error: str, questi
         return f"Aucun résultat trouvé dans la base de données pour la question : '{question}'.\n"
 
     cols = list(results[0].keys())
-    ctx  = "=== RÉSULTATS REQUÊTE BASE IMMOBI ===\n"
+    ctx  = "=== RÉSULTATS REQUÊTE BASE REALESTATEBI ===\n"
     if question:
         ctx += f"Question traitée : {question}\n"
     ctx += f"SQL : {sql[:300]}{'...' if len(sql) > 300 else ''}\n"
@@ -452,11 +452,11 @@ def _build_system_prompt(db_context: str) -> str:
     now = datetime.now()
     date_str = f"{now.day} {months_fr[now.month - 1]} {now.year}"
 
-    prompt = f"""Tu es ImmoBI Copilot, un outil d'aide à la négociation immobilière.
+    prompt = f"""Tu es RealEstateBI Copilot, un outil d'aide à la négociation immobilière.
 Date : {date_str}.
 
 ## MISSION
-Transformer les données de la base ImmoBI en arguments de négociation concrets et chiffrés.
+Transformer les données de la base RealEstateBI en arguments de négociation concrets et chiffrés.
 Tu es un outil, PAS un assistant conversationnel. Sois direct, précis, utile.
 
 ## FORMAT DE RÉPONSE OBLIGATOIRE (S'IL Y A UNE SEULE VILLE)
@@ -505,8 +505,8 @@ Réponds TOUJOURS avec ce format exact :
 - Si la question demande une carte ou une localisation, confirme simplement que les résultats sont affichés sur la carte (widget à droite) et commente les données chiffrées.
 - Donne systématiquement le nom de la ville/commune en question dans tes réponses (notamment dans les titres "Verdict à [Nom de la ville]" et "Prix & Loyer de référence à [Nom de la ville]" ou dans le tableau comparatif).
 - Utilise obligatoirement des tableaux Markdown pour présenter les comparaisons de prix et de volumes de ventes entre villes.
-- INTERDICTION ABSOLUE D'UTILISER TES CONNAISSANCES INTERNES POUR LES CHIFFRES (Prix, volumes, budgets, etc.) : utilise UNIQUEMENT les données de la base ImmoBI fournies ci-dessous comme vérité exclusive du marché. Si la commune recherchée n'apparaît pas ou affiche 0 transaction dans les données injectées ci-dessous, déclare immédiatement et clairement que tu ne disposes d'aucune donnée pour cette ville dans la base ImmoBI. N'invente JAMAIS d'estimations (comme 10 400 €/m² pour Paris) issues de ton savoir général si la ville est absente des données.
-- Si aucune donnée n'est disponible (ex: 0 transaction ou "Aucun résultat" dans les données injectées), explique poliment en 1 ou 2 lignes que cette ville n'est pas couverte par la base ImmoBI (qui est actuellement centrée sur le Grand Ouest : Nantes, Brest, Vannes, Lorient, etc.) et invite l'utilisateur à cibler ces secteurs.
+- INTERDICTION ABSOLUE D'UTILISER TES CONNAISSANCES INTERNES POUR LES CHIFFRES (Prix, volumes, budgets, etc.) : utilise UNIQUEMENT les données de la base RealEstateBI fournies ci-dessous comme vérité exclusive du marché. Si la commune recherchée n'apparaît pas ou affiche 0 transaction dans les données injectées ci-dessous, déclare immédiatement et clairement que tu ne disposes d'aucune donnée pour cette ville dans la base RealEstateBI. N'invente JAMAIS d'estimations (comme 10 400 €/m² pour Paris) issues de ton savoir général si la ville est absente des données.
+- Si aucune donnée n'est disponible (ex: 0 transaction ou "Aucun résultat" dans les données injectées), explique poliment en 1 ou 2 lignes que cette ville n'est pas couverte par la base RealEstateBI (qui est actuellement centrée sur le Grand Ouest : Nantes, Brest, Vannes, Lorient, etc.) et invite l'utilisateur à cibler ces secteurs.
 - Décotes applicables : DPE F/G → -8% à -15%, PEB actif → -5% à -10%, prix > médiane → négocier fermement.
 - Pour les questions sur le loyer et le rendement, toujours mentionner explicitement qu'il s'agit de loyers **hors charges (HC)**.
 """
@@ -813,7 +813,7 @@ def chat_copilot():
         return jsonify({"choices": [{"message": {
             "role": "assistant",
             "content": (
-                "✨ **ImmoBI Copilot** — Configurez vos clés Azure OpenAI dans `.env` :\n"
+                "✨ **RealEstateBI Copilot** — Configurez vos clés Azure OpenAI dans `.env` :\n"
                 "```\nAZURE_OPENAI_KEY=...\nAZURE_OPENAI_ENDPOINT=...\n"
                 "AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o\n```"
             )

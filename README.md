@@ -1,4 +1,4 @@
-# ImmoBI — Analyse du Marché Immobilier Français
+# RealEstateBI — Analyse du Marché Immobilier Français
 ## *Pipeline de données géospatiales · API REST · Interface analytique · Assistant IA*
 
 > **Projet SAE 2026** | Python · PostgreSQL/PostGIS · Flask · Dagster · Azure OpenAI  
@@ -17,7 +17,7 @@
 5. [Base de données](#base-de-donnees)
 6. [API REST](#api-rest)
 7. [Frontend](#frontend)
-8. [Assistant IA](#assistant-ia--immobi-copilot)
+8. [Assistant IA](#assistant-ia--realestatebi-copilot)
 9. [Installation](#installation)
 10. [Deploiement](#deploiement)
 
@@ -25,7 +25,7 @@
 
 ## Vue d'ensemble
 
-**ImmoBI** est un **entrepôt de données immobilières** (*Data Warehouse*) multi-sources centré sur l'analyse spatiale et statistique du marché immobilier français. Il s'inscrit dans une démarche complète d'ingénierie de la donnée (*data engineering*) couvrant :
+**RealEstateBI** est un **entrepôt de données immobilières** (*Data Warehouse*) multi-sources centré sur l'analyse spatiale et statistique du marché immobilier français. Il s'inscrit dans une démarche complète d'ingénierie de la donnée (*data engineering*) couvrant :
 
 - **L'extraction** automatisée de 6 sources de données ouvertes hétérogènes (API REST, fichiers Parquet, GeoJSON, CSV compressé gz)
 - **La transformation** : normalisation des adresses, détection des valeurs aberrantes, jointure spatiale sous PostGIS en deux passes (adresse exacte + proximité GPS 30m)
@@ -180,7 +180,7 @@ flask --app api:create_app run --debug
 
 ---
 
-## Assistant IA — ImmoBI Copilot
+## Assistant IA — RealEstateBI Copilot
 
 Chatbot intégré à toutes les pages (bouton bas droite).
 

@@ -2,7 +2,7 @@
     // ── Styles CSS injectés dynamiquement ─────────────────────────
     const style = document.createElement("style");
     style.innerHTML = `
-        .immobi-chat-bubble {
+        .realestatebi-chat-bubble {
             position: fixed;
             bottom: 24px;
             right: 24px;
@@ -22,15 +22,15 @@
             user-select: none;
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
-        .immobi-chat-bubble:hover {
+        .realestatebi-chat-bubble:hover {
             transform: scale(1.1) rotate(5deg);
             box-shadow: 0 8px 24px rgba(124, 58, 237, 0.6);
         }
-        .immobi-chat-bubble:active {
+        .realestatebi-chat-bubble:active {
             transform: scale(0.95);
         }
         
-        .immobi-chat-window {
+        .realestatebi-chat-window {
             position: fixed;
             bottom: 85px;
             right: 24px;
@@ -53,16 +53,16 @@
             pointer-events: none;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        .immobi-chat-window.open {
+        .realestatebi-chat-window.open {
             transform: scale(1) translateY(0);
             opacity: 1;
             pointer-events: auto;
         }
-        .immobi-chat-window.with-visualizer {
+        .realestatebi-chat-window.with-visualizer {
             width: 850px;
             max-width: 90vw;
         }
-        .immobi-chat-window.fullscreen {
+        .realestatebi-chat-window.fullscreen {
             width: 100vw !important;
             height: 100vh !important;
             max-width: none !important;
@@ -72,20 +72,20 @@
             border-radius: 0 !important;
             border: none !important;
         }
-        .immobi-chat-window.fullscreen .immobi-chat-main {
+        .realestatebi-chat-window.fullscreen .realestatebi-chat-main {
             width: 380px !important;
         }
-        .immobi-chat-window.fullscreen .immobi-chat-visualizer {
+        .realestatebi-chat-window.fullscreen .realestatebi-chat-visualizer {
             flex: 1 !important;
         }
-        .immobi-chat-main {
+        .realestatebi-chat-main {
             width: 380px;
             height: 100%;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
         }
-        .immobi-chat-visualizer {
+        .realestatebi-chat-visualizer {
             flex: 1;
             height: 100%;
             display: none;
@@ -96,10 +96,10 @@
             overflow: hidden;
             border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .immobi-chat-window.with-visualizer .immobi-chat-visualizer {
+        .realestatebi-chat-window.with-visualizer .realestatebi-chat-visualizer {
             display: flex;
         }
-        .immobi-chat-visualizer-close {
+        .realestatebi-chat-visualizer-close {
             position: absolute;
             top: 12px;
             right: 12px;
@@ -111,16 +111,16 @@
             z-index: 10;
             transition: color 0.15s;
         }
-        .immobi-chat-visualizer-close:hover {
+        .realestatebi-chat-visualizer-close:hover {
             color: #fff;
         }
-        .immobi-chat-visualizer-content {
+        .realestatebi-chat-visualizer-content {
             display: flex;
             flex-direction: column;
             height: 100%;
             width: 100%;
         }
-        .immobi-chat-visualizer-content h4 {
+        .realestatebi-chat-visualizer-content h4 {
             margin: 0 0 1rem 0;
             color: #fff;
             font-weight: 700;
@@ -130,7 +130,7 @@
             -webkit-text-fill-color: transparent;
         }
         
-        .immobi-chat-header {
+        .realestatebi-chat-header {
             padding: 1rem 1.25rem;
             background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(37, 99, 235, 0.2));
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -138,11 +138,11 @@
             align-items: center;
             justify-content: space-between;
         }
-        .immobi-chat-title-wrap {
+        .realestatebi-chat-title-wrap {
             display: flex;
             flex-direction: column;
         }
-        .immobi-chat-title {
+        .realestatebi-chat-title {
             font-weight: 700;
             color: #fff;
             font-size: 0.95rem;
@@ -151,7 +151,7 @@
             align-items: center;
             gap: 0.35rem;
         }
-        .immobi-chat-title span.pulse-dot {
+        .realestatebi-chat-title span.pulse-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
@@ -160,12 +160,12 @@
             box-shadow: 0 0 8px #22c55e;
             animation: pulse-active 1.8s infinite;
         }
-        .immobi-chat-subtitle {
+        .realestatebi-chat-subtitle {
             font-size: 0.72rem;
             color: #94a3b8;
             margin-top: 0.15rem;
         }
-        .immobi-chat-close {
+        .realestatebi-chat-close {
             color: #94a3b8;
             font-size: 1.2rem;
             cursor: pointer;
@@ -174,11 +174,11 @@
             background: none;
             padding: 4px;
         }
-        .immobi-chat-close:hover {
+        .realestatebi-chat-close:hover {
             color: #fff;
         }
 
-        .immobi-chat-messages {
+        .realestatebi-chat-messages {
             flex: 1;
             padding: 1.25rem;
             overflow-y: auto;
@@ -187,46 +187,46 @@
             gap: 1rem;
             scroll-behavior: smooth;
         }
-        .immobi-chat-messages::-webkit-scrollbar {
+        .realestatebi-chat-messages::-webkit-scrollbar {
             width: 5px;
         }
-        .immobi-chat-messages::-webkit-scrollbar-thumb {
+        .realestatebi-chat-messages::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.15);
             border-radius: 99px;
         }
         
-        .immobi-msg {
+        .realestatebi-msg {
             max-width: 85%;
             padding: 0.75rem 1rem;
             font-size: 0.85rem;
             line-height: 1.45;
             animation: message-fade 0.25s cubic-bezier(0, 0, 0.2, 1) forwards;
         }
-        .immobi-msg-user {
+        .realestatebi-msg-user {
             align-self: flex-end;
             background: #7c3aed;
             color: #fff;
             border-radius: 14px 14px 2px 14px;
             box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
         }
-        .immobi-msg-assistant {
+        .realestatebi-msg-assistant {
             align-self: flex-start;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.05);
             color: #f1f5f9;
             border-radius: 14px 14px 14px 2px;
         }
-        .immobi-msg p {
+        .realestatebi-msg p {
             margin: 0 0 0.5rem 0;
         }
-        .immobi-msg p:last-child {
+        .realestatebi-msg p:last-child {
             margin: 0;
         }
-        .immobi-msg strong {
+        .realestatebi-msg strong {
             color: #fff;
             font-weight: 700;
         }
-        .immobi-msg code {
+        .realestatebi-msg code {
             background: rgba(255, 255, 255, 0.1);
             padding: 1px 4px;
             border-radius: 4px;
@@ -234,38 +234,38 @@
             font-size: 0.8rem;
             color: #f472b6;
         }
-        .immobi-msg pre {
+        .realestatebi-msg pre {
             background: rgba(0, 0, 0, 0.3);
             padding: 0.6rem;
             border-radius: 6px;
             overflow-x: auto;
             margin: 0.4rem 0;
         }
-        .immobi-msg pre code {
+        .realestatebi-msg pre code {
             background: none;
             padding: 0;
             color: #f8fafc;
         }
-        .immobi-msg ul, .immobi-msg ol {
+        .realestatebi-msg ul, .realestatebi-msg ol {
             margin: 0.4rem 0;
             padding-left: 1.2rem;
         }
-        .immobi-msg li {
+        .realestatebi-msg li {
             margin-bottom: 0.25rem;
         }
-        .immobi-msg h1, .immobi-msg h2, .immobi-msg h3 {
+        .realestatebi-msg h1, .realestatebi-msg h2, .realestatebi-msg h3 {
             color: #e2e8f0;
             font-weight: 700;
             margin: 0.6rem 0 0.3rem 0;
             line-height: 1.3;
         }
-        .immobi-msg h1 { font-size: 1rem; }
-        .immobi-msg h2 { font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.2rem; }
-        .immobi-msg h3 { font-size: 0.88rem; color: #a5b4fc; }
-        .immobi-msg em { color: #cbd5e1; font-style: italic; }
-        .immobi-msg a { color: #818cf8; text-decoration: underline; }
+        .realestatebi-msg h1 { font-size: 1rem; }
+        .realestatebi-msg h2 { font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.2rem; }
+        .realestatebi-msg h3 { font-size: 0.88rem; color: #a5b4fc; }
+        .realestatebi-msg em { color: #cbd5e1; font-style: italic; }
+        .realestatebi-msg a { color: #818cf8; text-decoration: underline; }
         
-        .immobi-chat-input-panel {
+        .realestatebi-chat-input-panel {
             padding: 0.85rem 1.1rem;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
@@ -273,7 +273,7 @@
             background: rgba(15, 23, 42, 0.5);
             align-items: center;
         }
-        .immobi-chat-input {
+        .realestatebi-chat-input {
             flex: 1;
             background: rgba(255, 255, 255, 0.07);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -284,12 +284,12 @@
             outline: none;
             transition: all 0.15s;
         }
-        .immobi-chat-input:focus {
+        .realestatebi-chat-input:focus {
             background: rgba(255, 255, 255, 0.1);
             border-color: #7c3aed;
             box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
         }
-        .immobi-chat-send {
+        .realestatebi-chat-send {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -302,11 +302,11 @@
             cursor: pointer;
             transition: background 0.15s, transform 0.1s;
         }
-        .immobi-chat-send:hover {
+        .realestatebi-chat-send:hover {
             background: #6d28d9;
             transform: scale(1.05);
         }
-        .immobi-chat-send:active {
+        .realestatebi-chat-send:active {
             transform: scale(0.95);
         }
         
@@ -343,7 +343,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .immobi-chat-tabs {
+        .realestatebi-chat-tabs {
             display: none;
             width: 100%;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -353,7 +353,7 @@
             box-sizing: border-box;
             flex-shrink: 0;
         }
-        .immobi-chat-tab {
+        .realestatebi-chat-tab {
             flex: 1;
             padding: 6px 12px;
             background: rgba(255, 255, 255, 0.05);
@@ -367,7 +367,7 @@
             font-weight: 600;
             outline: none;
         }
-        .immobi-chat-tab.active {
+        .realestatebi-chat-tab.active {
             background: rgba(124, 58, 237, 0.2);
             border-color: #7c3aed;
             color: #fff;
@@ -375,7 +375,7 @@
         }
 
         @media(max-width: 768px), (max-height: 680px) {
-            .immobi-chat-window {
+            .realestatebi-chat-window {
                 width: calc(100% - 32px) !important;
                 height: calc(100% - 110px) !important;
                 bottom: 80px;
@@ -386,33 +386,33 @@
                 max-height: none !important;
                 flex-direction: column !important;
             }
-            .immobi-chat-main {
+            .realestatebi-chat-main {
                 width: 100% !important;
                 height: 100% !important;
             }
-            .immobi-chat-window.with-visualizer .immobi-chat-tabs {
+            .realestatebi-chat-window.with-visualizer .realestatebi-chat-tabs {
                 display: flex;
             }
-            .immobi-chat-window.with-visualizer .immobi-chat-main {
+            .realestatebi-chat-window.with-visualizer .realestatebi-chat-main {
                 height: calc(100% - 48px) !important;
             }
-            .immobi-chat-window.with-visualizer .immobi-chat-visualizer {
+            .realestatebi-chat-window.with-visualizer .realestatebi-chat-visualizer {
                 display: none;
                 width: 100% !important;
                 height: calc(100% - 48px) !important;
                 border-right: none !important;
                 border-bottom: none !important;
             }
-            .immobi-chat-window.with-visualizer.show-visualizer-only .immobi-chat-main {
+            .realestatebi-chat-window.with-visualizer.show-visualizer-only .realestatebi-chat-main {
                 display: none !important;
             }
-            .immobi-chat-window.with-visualizer.show-visualizer-only .immobi-chat-visualizer {
+            .realestatebi-chat-window.with-visualizer.show-visualizer-only .realestatebi-chat-visualizer {
                 display: flex !important;
             }
         }
         
         /* Premium Table & Visual Comparison Styling */
-        .immobi-table-container {
+        .realestatebi-table-container {
             width: 100%;
             overflow-x: auto;
             margin: 0.8rem 0;
@@ -421,14 +421,14 @@
             background: rgba(15, 23, 42, 0.4);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
-        .immobi-table {
+        .realestatebi-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.78rem;
             color: #e2e8f0;
             text-align: left;
         }
-        .immobi-table th {
+        .realestatebi-table th {
             background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(37, 99, 235, 0.2));
             font-weight: 700;
             color: #fff;
@@ -438,35 +438,35 @@
             font-size: 0.68rem;
             letter-spacing: 0.03em;
         }
-        .immobi-table td {
+        .realestatebi-table td {
             padding: 0.6rem 0.8rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             vertical-align: middle;
             background: transparent !important; /* Force transparent cells to override main.css */
         }
-        .immobi-table tr:last-child td {
+        .realestatebi-table tr:last-child td {
             border-bottom: none;
         }
-        .immobi-table tr:hover {
+        .realestatebi-table tr:hover {
             background: rgba(255, 255, 255, 0.04) !important;
         }
-        .immobi-table tr:hover td {
+        .realestatebi-table tr:hover td {
             background: rgba(255, 255, 255, 0.06) !important; /* Force modern hover to override main.css tr:hover td */
         }
-        .immobi-bar-cell {
+        .realestatebi-bar-cell {
             display: flex;
             flex-direction: column;
             gap: 4px;
             min-width: 110px;
         }
-        .immobi-bar-wrap {
+        .realestatebi-bar-wrap {
             width: 100%;
             height: 5px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 2px;
             overflow: hidden;
         }
-        .immobi-bar-fill {
+        .realestatebi-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #a78bfa, #60a5fa);
             border-radius: 2px;
@@ -478,7 +478,7 @@
         }
         
         /* Premium Copilot Suggestion Pills */
-        .immobi-chat-suggestions {
+        .realestatebi-chat-suggestions {
             display: flex;
             gap: 8px;
             padding: 0.5rem 1.1rem;
@@ -488,7 +488,7 @@
             align-items: center;
             transition: all 0.3s ease;
         }
-        .immobi-suggestion-pill {
+        .realestatebi-suggestion-pill {
             background: rgba(124, 58, 237, 0.15);
             border: 1px solid rgba(124, 58, 237, 0.3);
             color: #c084fc;
@@ -502,19 +502,19 @@
             transition: all 0.2s ease;
             user-select: none;
         }
-        .immobi-suggestion-pill:hover {
+        .realestatebi-suggestion-pill:hover {
             background: rgba(124, 58, 237, 0.3);
             border-color: #a78bfa;
             color: #fff;
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
         }
-        .immobi-suggestion-pill:active {
+        .realestatebi-suggestion-pill:active {
             transform: translateY(0);
         }
         
         /* Interactive Visual Filters CSS */
-        .immobi-visualizer-filters {
+        .realestatebi-visualizer-filters {
             display: none;
             flex-direction: column;
             gap: 10px;
@@ -528,21 +528,21 @@
             box-sizing: border-box;
             animation: message-fade 0.2s ease-out;
         }
-        .immobi-filters-row {
+        .realestatebi-filters-row {
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
             align-items: stretch;
             width: 100%;
         }
-        .immobi-filter-group {
+        .realestatebi-filter-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
             flex: 1;
             min-width: 130px;
         }
-        .immobi-filter-label {
+        .realestatebi-filter-label {
             color: #94a3b8;
             font-size: 0.7rem;
             font-weight: 600;
@@ -552,12 +552,12 @@
             justify-content: space-between;
             align-items: center;
         }
-        .immobi-filter-buttons {
+        .realestatebi-filter-buttons {
             display: flex;
             gap: 5px;
             flex-wrap: wrap;
         }
-        .immobi-filter-btn {
+        .realestatebi-filter-btn {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: #cbd5e1;
@@ -570,23 +570,23 @@
             outline: none;
             user-select: none;
         }
-        .immobi-filter-btn:hover {
+        .realestatebi-filter-btn:hover {
             background: rgba(255, 255, 255, 0.12);
             color: #fff;
         }
-        .immobi-filter-btn.active {
+        .realestatebi-filter-btn.active {
             background: rgba(124, 58, 237, 0.25);
             border-color: #7c3aed;
             color: #c084fc;
             box-shadow: 0 0 8px rgba(124, 58, 237, 0.2);
         }
-        .immobi-filter-dpe-container {
+        .realestatebi-filter-dpe-container {
             display: flex;
             gap: 4px;
             justify-content: space-between;
             width: 100%;
         }
-        .immobi-filter-dpe-badge {
+        .realestatebi-filter-dpe-badge {
             flex: 1;
             height: 22px;
             border-radius: 4px;
@@ -602,7 +602,7 @@
             color: #fff;
             text-align: center;
         }
-        .immobi-filter-dpe-badge.inactive {
+        .realestatebi-filter-dpe-badge.inactive {
             opacity: 0.25;
             filter: grayscale(85%);
             border-color: rgba(255, 255, 255, 0.08);
@@ -610,7 +610,7 @@
         }
         
         /* Slider Styling */
-        .immobi-filter-slider {
+        .realestatebi-filter-slider {
             -webkit-appearance: none;
             width: 100%;
             height: 5px;
@@ -619,7 +619,7 @@
             outline: none;
             margin: 8px 0 4px 0;
         }
-        .immobi-filter-slider::-webkit-slider-thumb {
+        .realestatebi-filter-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 15px;
@@ -630,7 +630,7 @@
             box-shadow: 0 0 6px rgba(124, 58, 237, 0.5);
             transition: transform 0.1s;
         }
-        .immobi-filter-slider::-webkit-slider-thumb:hover {
+        .realestatebi-filter-slider::-webkit-slider-thumb:hover {
             transform: scale(1.2);
         }
     `;
@@ -849,7 +849,7 @@
         });
 
         // Génération du tableau HTML stylisé
-        let html = '<div class="immobi-table-container"><table class="immobi-table">';
+        let html = '<div class="realestatebi-table-container"><table class="realestatebi-table">';
 
         // En-tête
         html += '<thead><tr>';
@@ -870,10 +870,10 @@
                     if (numVal !== null) {
                         const pct = Math.min(100, Math.round((numVal / maxValues[colIdx]) * 100));
                         html += `<td>
-                            <div class="immobi-bar-cell">
+                            <div class="realestatebi-bar-cell">
                                 <div><strong>${cellVal}</strong></div>
-                                <div class="immobi-bar-wrap">
-                                    <div class="immobi-bar-fill" style="--fill-width: ${pct}%"></div>
+                                <div class="realestatebi-bar-wrap">
+                                    <div class="realestatebi-bar-fill" style="--fill-width: ${pct}%"></div>
                                 </div>
                             </div>
                         </td>`;
@@ -891,82 +891,82 @@
 
     // ── Construction du DOM du Widget ─────────────────────────────
     const chatBubble = document.createElement("div");
-    chatBubble.className = "immobi-chat-bubble";
+    chatBubble.className = "realestatebi-chat-bubble";
     chatBubble.innerHTML = "💬";
 
     const chatWindow = document.createElement("div");
-    chatWindow.className = "immobi-chat-window";
+    chatWindow.className = "realestatebi-chat-window";
     chatWindow.innerHTML = `
         <!-- Tabs (Visible only on mobile with-visualizer) -->
-        <div class="immobi-chat-tabs" id="immobi-chat-tabs">
-            <button class="immobi-chat-tab active" id="immobi-chat-tab-chat">💬 Discussion</button>
-            <button class="immobi-chat-tab" id="immobi-chat-tab-vis">📊 Visuel</button>
+        <div class="realestatebi-chat-tabs" id="realestatebi-chat-tabs">
+            <button class="realestatebi-chat-tab active" id="realestatebi-chat-tab-chat">💬 Discussion</button>
+            <button class="realestatebi-chat-tab" id="realestatebi-chat-tab-vis">📊 Visuel</button>
         </div>
 
         <!-- Visualizer Panel -->
-        <div class="immobi-chat-visualizer" id="immobi-chat-visualizer">
+        <div class="realestatebi-chat-visualizer" id="realestatebi-chat-visualizer">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-shrink: 0;">
-                <h4 id="immobi-visualizer-title" style="margin: 0; font-weight: 700; font-size: 0.95rem; background: linear-gradient(135deg, #22d3ee, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Visualisation</h4>
+                <h4 id="realestatebi-visualizer-title" style="margin: 0; font-weight: 700; font-size: 0.95rem; background: linear-gradient(135deg, #22d3ee, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Visualisation</h4>
                 <div style="display: flex; gap: 8px; align-items: center; z-index: 10;">
-                    <button class="immobi-chat-visualizer-expand" id="immobi-chat-visualizer-expand" title="Plein écran" style="color: #94a3b8; border: none; background: none; font-size: 1.1rem; cursor: pointer; padding: 4px; transition: color 0.15s;">⛶</button>
-                    <button class="immobi-chat-visualizer-close" id="immobi-chat-visualizer-close" title="Fermer" style="color: #94a3b8; border: none; background: none; font-size: 1.1rem; cursor: pointer; padding: 4px; transition: color 0.15s;">✕</button>
+                    <button class="realestatebi-chat-visualizer-expand" id="realestatebi-chat-visualizer-expand" title="Plein écran" style="color: #94a3b8; border: none; background: none; font-size: 1.1rem; cursor: pointer; padding: 4px; transition: color 0.15s;">⛶</button>
+                    <button class="realestatebi-chat-visualizer-close" id="realestatebi-chat-visualizer-close" title="Fermer" style="color: #94a3b8; border: none; background: none; font-size: 1.1rem; cursor: pointer; padding: 4px; transition: color 0.15s;">✕</button>
                 </div>
             </div>
-            <div class="immobi-chat-visualizer-content" style="flex: 1; height: calc(100% - 30px); display: flex; flex-direction: column; overflow: hidden; width:100%;">
+            <div class="realestatebi-chat-visualizer-content" style="flex: 1; height: calc(100% - 30px); display: flex; flex-direction: column; overflow: hidden; width:100%;">
                 <!-- Interactive Filters Panel -->
-                <div class="immobi-visualizer-filters" id="immobi-visualizer-filters">
-                    <div class="immobi-filters-row">
+                <div class="realestatebi-visualizer-filters" id="realestatebi-visualizer-filters">
+                    <div class="realestatebi-filters-row">
                         <!-- Budget Filter -->
-                        <div class="immobi-filter-group" id="filter-group-budget">
-                            <div class="immobi-filter-label">
+                        <div class="realestatebi-filter-group" id="filter-group-budget">
+                            <div class="realestatebi-filter-label">
                                 <span>Budget Max</span>
                                 <span id="filter-val-budget" style="color: #22d3ee; font-weight:700;">-</span>
                             </div>
-                            <input type="range" class="immobi-filter-slider" id="filter-input-budget">
+                            <input type="range" class="realestatebi-filter-slider" id="filter-input-budget">
                         </div>
                         
                         <!-- Property Type Filter -->
-                        <div class="immobi-filter-group" id="filter-group-type">
-                            <div class="immobi-filter-label">Type de bien</div>
-                            <div class="immobi-filter-buttons" id="filter-container-type"></div>
+                        <div class="realestatebi-filter-group" id="filter-group-type">
+                            <div class="realestatebi-filter-label">Type de bien</div>
+                            <div class="realestatebi-filter-buttons" id="filter-container-type"></div>
                         </div>
 
                         <!-- DPE Filter -->
-                        <div class="immobi-filter-group" id="filter-group-dpe" style="flex: 1.5; min-width: 180px;">
-                            <div class="immobi-filter-label">Classe DPE</div>
-                            <div class="immobi-filter-dpe-container" id="filter-container-dpe"></div>
+                        <div class="realestatebi-filter-group" id="filter-group-dpe" style="flex: 1.5; min-width: 180px;">
+                            <div class="realestatebi-filter-label">Classe DPE</div>
+                            <div class="realestatebi-filter-dpe-container" id="filter-container-dpe"></div>
                         </div>
                     </div>
                 </div>
 
-                <div id="immobi-visualizer-chart-wrapper" style="display:none; height:100%; width:100%;">
-                    <canvas id="immobi-visualizer-chart"></canvas>
+                <div id="realestatebi-visualizer-chart-wrapper" style="display:none; height:100%; width:100%;">
+                    <canvas id="realestatebi-visualizer-chart"></canvas>
                 </div>
-                <div id="immobi-visualizer-map-wrapper" style="display:none; height:100%; width:100%;">
-                    <div id="immobi-visualizer-map" style="height:100%; width:100%; min-height: 250px; border-radius: 8px;"></div>
+                <div id="realestatebi-visualizer-map-wrapper" style="display:none; height:100%; width:100%;">
+                    <div id="realestatebi-visualizer-map" style="height:100%; width:100%; min-height: 250px; border-radius: 8px;"></div>
                 </div>
             </div>
         </div>
         
         <!-- Main Chat Panel -->
-        <div class="immobi-chat-main">
-            <div class="immobi-chat-header">
-                <div class="immobi-chat-title-wrap">
-                    <h3 class="immobi-chat-title"><span class="pulse-dot"></span> ImmoBI Copilot</h3>
-                    <div class="immobi-chat-subtitle">Assistant IA connecté à la Base de Données</div>
+        <div class="realestatebi-chat-main">
+            <div class="realestatebi-chat-header">
+                <div class="realestatebi-chat-title-wrap">
+                    <h3 class="realestatebi-chat-title"><span class="pulse-dot"></span> RealEstateBI Copilot</h3>
+                    <div class="realestatebi-chat-subtitle">Assistant IA connecté à la Base de Données</div>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="immobi-chat-clear" title="Réinitialiser le chat" style="color: #94a3b8; font-size: 1rem; cursor: pointer; border: none; background: none; padding: 4px; transition: color 0.15s;">🗑️</button>
-                    <button class="immobi-chat-close" title="Fermer">✕</button>
+                    <button class="realestatebi-chat-clear" title="Réinitialiser le chat" style="color: #94a3b8; font-size: 1rem; cursor: pointer; border: none; background: none; padding: 4px; transition: color 0.15s;">🗑️</button>
+                    <button class="realestatebi-chat-close" title="Fermer">✕</button>
                 </div>
             </div>
-            <div class="immobi-chat-messages" id="immobi-chat-messages">
-                <div class="immobi-msg immobi-msg-assistant" data-markdown="**ImmoBI Copilot** — outil de négociation immobilière 🏠&#10;&#10;Posez une question précise, obtenez un verdict chiffré :&#10;&#10;- *« Appartement 65m² à 280 000€ à Vannes, c'est négociable ? »*&#10;- *« Quels leviers de négo pour une maison DPE F à Lorient ? »*&#10;- *« Prix du marché appartement proche gare à Hennebont »*"></div>
+            <div class="realestatebi-chat-messages" id="realestatebi-chat-messages">
+                <div class="realestatebi-msg realestatebi-msg-assistant" data-markdown="**RealEstateBI Copilot** — outil de négociation immobilière 🏠&#10;&#10;Posez une question précise, obtenez un verdict chiffré :&#10;&#10;- *« Appartement 65m² à 280 000€ à Vannes, c'est négociable ? »*&#10;- *« Quels leviers de négo pour une maison DPE F à Lorient ? »*&#10;- *« Prix du marché appartement proche gare à Hennebont »*"></div>
             </div>
-            <div class="immobi-chat-suggestions" id="immobi-chat-suggestions" style="display: none;"></div>
-            <div class="immobi-chat-input-panel">
-                <input type="text" class="immobi-chat-input" id="immobi-chat-input" placeholder="Posez une question sur Vannes, Hennebont..." autocomplete="off">
-                <button class="immobi-chat-send" id="immobi-chat-send">➔</button>
+            <div class="realestatebi-chat-suggestions" id="realestatebi-chat-suggestions" style="display: none;"></div>
+            <div class="realestatebi-chat-input-panel">
+                <input type="text" class="realestatebi-chat-input" id="realestatebi-chat-input" placeholder="Posez une question sur Vannes, Hennebont..." autocomplete="off">
+                <button class="realestatebi-chat-send" id="realestatebi-chat-send">➔</button>
             </div>
         </div>
     `;
@@ -975,8 +975,8 @@
     document.body.appendChild(chatWindow);
 
     function selectTab(tabName) {
-        const tabChat = document.getElementById("immobi-chat-tab-chat");
-        const tabVis = document.getElementById("immobi-chat-tab-vis");
+        const tabChat = document.getElementById("realestatebi-chat-tab-chat");
+        const tabVis = document.getElementById("realestatebi-chat-tab-vis");
         if (tabName === "chat") {
             chatWindow.classList.remove("show-visualizer-only");
             tabChat.classList.add("active");
@@ -993,23 +993,23 @@
         }
     }
 
-    document.getElementById("immobi-chat-tab-chat").addEventListener("click", () => selectTab("chat"));
-    document.getElementById("immobi-chat-tab-vis").addEventListener("click", () => selectTab("vis"));
+    document.getElementById("realestatebi-chat-tab-chat").addEventListener("click", () => selectTab("chat"));
+    document.getElementById("realestatebi-chat-tab-vis").addEventListener("click", () => selectTab("vis"));
 
-    document.getElementById("immobi-chat-visualizer-close").addEventListener("click", () => {
+    document.getElementById("realestatebi-chat-visualizer-close").addEventListener("click", () => {
         chatWindow.classList.remove("with-visualizer");
         chatWindow.classList.remove("fullscreen");
         selectTab("chat");
-        const expandBtn = document.getElementById("immobi-chat-visualizer-expand");
+        const expandBtn = document.getElementById("realestatebi-chat-visualizer-expand");
         if (expandBtn) {
             expandBtn.innerHTML = "⛶";
             expandBtn.title = "Plein écran";
         }
     });
 
-    document.getElementById("immobi-chat-visualizer-expand").addEventListener("click", () => {
+    document.getElementById("realestatebi-chat-visualizer-expand").addEventListener("click", () => {
         chatWindow.classList.toggle("fullscreen");
-        const expandBtn = document.getElementById("immobi-chat-visualizer-expand");
+        const expandBtn = document.getElementById("realestatebi-chat-visualizer-expand");
         if (chatWindow.classList.contains("fullscreen")) {
             expandBtn.innerHTML = "🗗";
             expandBtn.title = "Quitter le plein écran";
@@ -1026,10 +1026,10 @@
     });
 
     // ── Variables d'état conversationnel ──────────────────────────
-    let isWindowOpen = localStorage.getItem("immobi_chat_open") === "true";
+    let isWindowOpen = localStorage.getItem("realestatebi_chat_open") === "true";
     let messagesHistory = [];
     try {
-        const savedHistory = localStorage.getItem("immobi_chat_history");
+        const savedHistory = localStorage.getItem("realestatebi_chat_history");
         if (savedHistory) {
             messagesHistory = JSON.parse(savedHistory);
         }
@@ -1037,13 +1037,13 @@
         console.error("Erreur lors de la lecture de l'historique de chat", e);
     }
 
-    const chatMessagesEl = document.getElementById("immobi-chat-messages");
-    const chatSuggestionsEl = document.getElementById("immobi-chat-suggestions");
-    const chatInputEl = document.getElementById("immobi-chat-input");
-    const chatSendEl = document.getElementById("immobi-chat-send");
+    const chatMessagesEl = document.getElementById("realestatebi-chat-messages");
+    const chatSuggestionsEl = document.getElementById("realestatebi-chat-suggestions");
+    const chatInputEl = document.getElementById("realestatebi-chat-input");
+    const chatSendEl = document.getElementById("realestatebi-chat-send");
 
     // Formater le message de bienvenue initial (depuis l'attribut data-markdown)
-    const firstMsg = chatMessagesEl.querySelector(".immobi-msg-assistant[data-markdown]");
+    const firstMsg = chatMessagesEl.querySelector(".realestatebi-msg-assistant[data-markdown]");
     if (firstMsg) {
         const md = firstMsg.getAttribute("data-markdown")
             .replace(/&#10;/g, "\n");
@@ -1068,7 +1068,7 @@
     // ── Gestionnaires d'évènements ────────────────────────────────
     chatBubble.addEventListener("click", () => {
         isWindowOpen = !isWindowOpen;
-        localStorage.setItem("immobi_chat_open", isWindowOpen);
+        localStorage.setItem("realestatebi_chat_open", isWindowOpen);
         if (isWindowOpen) {
             openWindow();
         } else {
@@ -1076,15 +1076,15 @@
         }
     });
 
-    chatWindow.querySelector(".immobi-chat-close").addEventListener("click", () => {
+    chatWindow.querySelector(".realestatebi-chat-close").addEventListener("click", () => {
         closeWindow();
     });
 
-    chatWindow.querySelector(".immobi-chat-clear").addEventListener("click", () => {
+    chatWindow.querySelector(".realestatebi-chat-clear").addEventListener("click", () => {
         if (confirm("Voulez-vous réinitialiser l'historique de discussion ?")) {
             messagesHistory = [];
-            localStorage.removeItem("immobi_chat_history");
-            const messages = chatMessagesEl.querySelectorAll(".immobi-msg");
+            localStorage.removeItem("realestatebi_chat_history");
+            const messages = chatMessagesEl.querySelectorAll(".realestatebi-msg");
             messages.forEach((msg, idx) => {
                 if (idx > 0) msg.remove(); // Garde seulement le message de bienvenue initial
             });
@@ -1103,10 +1103,10 @@
 
     function closeWindow() {
         isWindowOpen = false;
-        localStorage.setItem("immobi_chat_open", "false");
+        localStorage.setItem("realestatebi_chat_open", "false");
         chatWindow.classList.remove("open");
         chatWindow.classList.remove("fullscreen");
-        const expandBtn = document.getElementById("immobi-chat-visualizer-expand");
+        const expandBtn = document.getElementById("realestatebi-chat-visualizer-expand");
         if (expandBtn) {
             expandBtn.innerHTML = "⛶";
             expandBtn.title = "Plein écran";
@@ -1155,7 +1155,7 @@
 
         pills.forEach(p => {
             const pill = document.createElement("div");
-            pill.className = "immobi-suggestion-pill";
+            pill.className = "realestatebi-suggestion-pill";
             pill.innerHTML = p.text;
             pill.addEventListener("click", () => {
                 chatInputEl.value = p.prompt;
@@ -1177,12 +1177,12 @@
     localStorage.setItem = function (key, value) {
         originalSetItem.apply(this, arguments);
         if (key === "selected_commune_name") {
-            window.dispatchEvent(new CustomEvent("immobiCommuneChanged", { detail: value }));
+            window.dispatchEvent(new CustomEvent("realestatebiCommuneChanged", { detail: value }));
         }
     };
 
     // Écouter les évènements de changement de commune
-    window.addEventListener("immobiCommuneChanged", (e) => {
+    window.addEventListener("realestatebiCommuneChanged", (e) => {
         updatePills(e.detail);
     });
 
@@ -1253,9 +1253,9 @@
             return;
         }
 
-        const titleEl = document.getElementById("immobi-visualizer-title");
-        const chartWrapper = document.getElementById("immobi-visualizer-chart-wrapper");
-        const mapWrapper = document.getElementById("immobi-visualizer-map-wrapper");
+        const titleEl = document.getElementById("realestatebi-visualizer-title");
+        const chartWrapper = document.getElementById("realestatebi-visualizer-chart-wrapper");
+        const mapWrapper = document.getElementById("realestatebi-visualizer-map-wrapper");
 
         let titleText = widget.title || "Visualisation";
         if (widget.type === 'map' && widget.map_config && widget.map_config.poi_markers && widget.map_config.poi_markers.length > 0) {
@@ -1265,7 +1265,7 @@
         titleEl.innerText = titleText;
         chatWindow.classList.add("with-visualizer");
 
-        const filterPanel = document.getElementById("immobi-visualizer-filters");
+        const filterPanel = document.getElementById("realestatebi-visualizer-filters");
 
         if (widget.type === 'chart') {
             chartWrapper.style.display = "block";
@@ -1309,7 +1309,7 @@
             currentVisualChart = null;
         }
 
-        const ctx = document.getElementById('immobi-visualizer-chart').getContext('2d');
+        const ctx = document.getElementById('realestatebi-visualizer-chart').getContext('2d');
 
         const dpeColors = {
             'A': '#15803d', 'B': '#16a34a', 'C': '#84cc16', 'D': '#facc15', 'E': '#f97316', 'F': '#dc2626', 'G': '#7f1d1d'
@@ -1397,11 +1397,11 @@
             currentVisualMap = null;
         }
 
-        const wrapper = document.getElementById('immobi-visualizer-map-wrapper');
-        wrapper.innerHTML = '<div id="immobi-visualizer-map" style="height:100%; width:100%; min-height: 250px; border-radius: 8px;"></div>';
+        const wrapper = document.getElementById('realestatebi-visualizer-map-wrapper');
+        wrapper.innerHTML = '<div id="realestatebi-visualizer-map" style="height:100%; width:100%; min-height: 250px; border-radius: 8px;"></div>';
 
         const center = config.center || [47.218371, -1.553621];
-        currentVisualMap = L.map('immobi-visualizer-map').setView(center, config.zoom || 13);
+        currentVisualMap = L.map('realestatebi-visualizer-map').setView(center, config.zoom || 13);
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri'
@@ -1449,7 +1449,7 @@
         if (hasTypes) {
             types.forEach(t => {
                 const btn = document.createElement("button");
-                btn.className = "immobi-filter-btn active";
+                btn.className = "realestatebi-filter-btn active";
                 btn.innerText = t;
                 btn.dataset.type = t;
                 btn.onclick = function () {
@@ -1478,7 +1478,7 @@
         if (hasDpes) {
             allDpes.forEach(d => {
                 const badge = document.createElement("div");
-                badge.className = "immobi-filter-dpe-badge";
+                badge.className = "realestatebi-filter-dpe-badge";
                 if (!dpesInData.includes(d)) {
                     badge.className += " inactive";
                 }
@@ -1508,11 +1508,11 @@
             const maxBudget = hasBudget ? parseFloat(budgetSlider.value) : Infinity;
 
             const activeTypes = hasTypes
-                ? Array.from(typeContainer.querySelectorAll(".immobi-filter-btn.active")).map(b => b.dataset.type)
+                ? Array.from(typeContainer.querySelectorAll(".realestatebi-filter-btn.active")).map(b => b.dataset.type)
                 : types;
 
             const activeDpes = hasDpes
-                ? Array.from(dpeContainer.querySelectorAll(".immobi-filter-dpe-badge:not(.inactive)")).map(b => b.dataset.dpe)
+                ? Array.from(dpeContainer.querySelectorAll(".realestatebi-filter-dpe-badge:not(.inactive)")).map(b => b.dataset.dpe)
                 : allDpes;
 
             const filteredMarkers = markersData.filter(m => {
@@ -1613,7 +1613,7 @@
 
         appendMessage(text, "user");
         messagesHistory.push({ role: "user", content: text });
-        localStorage.setItem("immobi_chat_history", JSON.stringify(messagesHistory));
+        localStorage.setItem("realestatebi_chat_history", JSON.stringify(messagesHistory));
 
         const typingEl = appendTypingIndicator();
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
@@ -1640,7 +1640,7 @@
                     const msg = data.choices[0].message.content;
                     appendMessage(msg, "assistant");
                     messagesHistory.push({ role: "assistant", content: msg });
-                    localStorage.setItem("immobi_chat_history", JSON.stringify(messagesHistory));
+                    localStorage.setItem("realestatebi_chat_history", JSON.stringify(messagesHistory));
                 }
                 return;
             }
@@ -1648,7 +1648,7 @@
             // ── Lecture du stream SSE ────────────────────────────
             typingEl.remove();
             assistantEl = document.createElement("div");
-            assistantEl.className = "immobi-msg immobi-msg-assistant";
+            assistantEl.className = "realestatebi-msg realestatebi-msg-assistant";
             chatMessagesEl.appendChild(assistantEl);
 
             const reader = res.body.getReader();
@@ -1688,7 +1688,7 @@
 
             if (fullContent) {
                 messagesHistory.push({ role: "assistant", content: fullContent, widget: receivedWidget });
-                localStorage.setItem("immobi_chat_history", JSON.stringify(messagesHistory));
+                localStorage.setItem("realestatebi_chat_history", JSON.stringify(messagesHistory));
                 if (receivedWidget && receivedWidget.type !== "none") {
                     addWidgetBadgeToBubble(assistantEl, receivedWidget);
                 }
@@ -1710,7 +1710,7 @@
     function addWidgetBadgeToBubble(bubbleEl, widget) {
         if (!widget || widget.type === "none" || !bubbleEl) return;
         const badge = document.createElement("button");
-        badge.className = "immobi-msg-widget-badge";
+        badge.className = "realestatebi-msg-widget-badge";
         badge.innerHTML = widget.type === "map" ? "🗺️ Voir la carte" : "📊 Voir le graphique";
         badge.style.cssText = `
             display: block;
@@ -1739,7 +1739,7 @@
 
     function appendMessage(content, role, widget = null) {
         const msg = document.createElement("div");
-        msg.className = `immobi-msg immobi-msg-${role}`;
+        msg.className = `realestatebi-msg realestatebi-msg-${role}`;
         msg.innerHTML = parseMarkdown(content);
         if (widget && widget.type !== "none") {
             addWidgetBadgeToBubble(msg, widget);
@@ -1750,7 +1750,7 @@
 
     function appendTypingIndicator() {
         const msg = document.createElement("div");
-        msg.className = "immobi-msg immobi-msg-assistant";
+        msg.className = "realestatebi-msg realestatebi-msg-assistant";
         msg.innerHTML = `
             <div class="typing-indicator">
                 <div class="typing-dot"></div>
